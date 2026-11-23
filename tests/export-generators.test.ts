@@ -11,6 +11,7 @@ import {
   escapeCsvCell,
   generateFormulationCsv,
   generateFormulationXlsx,
+  generateIngredientDatabaseXlsx,
 } from "../src/storage/exportCsvXlsx";
 import {
   generateFormulationPdf,
@@ -66,7 +67,17 @@ describe("Task 2 — Pure TS CSV, OOXML .xlsx & PDF 1.4 Generators + Safety Gate
     expect(asciiText).toContain("xl/worksheets/sheet1.xml");
     expect(asciiText).toContain("xl/worksheets/sheet2.xml");
     expect(asciiText).toContain("xl/worksheets/sheet3.xml");
+    expect(asciiText).toContain("xl/worksheets/sheet4.xml");
+    expect(asciiText).toContain("Matriks Nutrien Bahan");
     expect(asciiText).toContain("[Content_Types].xml");
+
+    const dbXlsx = generateIngredientDatabaseXlsx({
+      ingredients: MOCK_INGREDIENTS.slice(0, 20),
+      nutrientsCatalog: MOCK_NUTRIENTS,
+    });
+    const dbXlsxAscii = new TextDecoder("latin1").decode(dbXlsx);
+    expect(dbXlsxAscii).toContain("Katalog Nutrien Lengkap");
+    expect(dbXlsxAscii).toContain("Ringkasan 8 Kelas IFN");
   });
 
   it("menghasilkan dokumen PDF 1.4 valid untuk mode 'batch_only' dan 'full'", async () => {
@@ -105,6 +116,8 @@ describe("Task 2 — Pure TS CSV, OOXML .xlsx & PDF 1.4 Generators + Safety Gate
     expect(fullAscii.startsWith("%PDF-1.4")).toBe(true);
     expect(fullAscii).toContain("PROFIL NUTRIEN AKTUAL");
     expect(fullAscii).toContain("ANALISIS EKONOMI");
+    expect(fullAscii).toContain("TAIL KOP PENGESAHAN");
+    expect(fullAscii).toContain("Konsumsi Harian");
     expect(fullAscii.trimEnd().endsWith("%%EOF")).toBe(true);
   });
 

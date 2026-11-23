@@ -1,6 +1,7 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useId, useMemo, useState } from "react";
 import { Check, Plus, Search } from "lucide-react";
 import { getSpeciesLabelI18n, pickLang } from "../../i18n";
+import { useOptionalThemeContext } from "../../theme";
 import type { AppLanguage, Basis, Requirement } from "../../types";
 import { cn } from "../../utils/cn";
 import { formatNumberLocale, resolveDisplayDigits } from "../../utils/locale-number";
@@ -23,16 +24,21 @@ export interface RequirementLibraryPageProps {
 
 type GroupFilter = "all" | "sni" | "poultry" | "ruminant";
 
-function formatBoundCell(min: number | undefined, max: number | undefined, digits: number): string {
+function formatBoundCell(
+  min: number | undefined,
+  max: number | undefined,
+  digits: number,
+  emptyCell = "—",
+): string {
   if (min !== undefined && max !== undefined) {
     return `${formatNumberLocale(min, digits)}–${formatNumberLocale(max, digits)}`;
   }
   if (min !== undefined) return `≥ ${formatNumberLocale(min, digits)}`;
   if (max !== undefined) return `≤ ${formatNumberLocale(max, digits)}`;
-  return "—";
+  return emptyCell;
 }
 
-function extractShortSource(req: Requirement): string {
+function extractShortSource(req: Requirement, sanitizeEmDash = false): string {
   const src = req.source ?? "";
   const sniMatch = /SNI\s+[\d.-]+:\d{4}/i.exec(src);
   if (sniMatch) return sniMatch[0];
@@ -40,16 +46,14 @@ function extractShortSource(req: Requirement): string {
   if (/NRC\s*\(1988\)/i.test(src)) return "NRC (1988)";
   if (/NRC.*1994/i.test(src)) return "NRC (1994)";
   if (/NRC.*2016/i.test(src)) return "NRC (2016)";
-  return src.length > 28 ? `${src.slice(0, 26)}…` : src || "Standar";
+  const cleaned = sanitizeEmDash ? src.replace(/\s*—\s*/g, ", ") : src;
+  return cleaned.length > 28 ? `${cleaned.slice(0, 26)}…` : cleaned || "Standar";
 }
 
 function isPoultrySpecies(species: string): boolean {
   return species === "broiler" || species === "layer" || species === "buras" || species === "duck";
 }
 
-/**
- * Halaman Profil Kebutuhan Ternak dengan tabel ringkas, sederhana, dan mudah dipindai.
- */
 export const RequirementLibraryPage = memo(function RequirementLibraryPage({
   requirements,
   activeRequirementId,
@@ -59,8 +63,12 @@ export const RequirementLibraryPage = memo(function RequirementLibraryPage({
   onSelectAndUse,
   onCreateProfile,
 }: RequirementLibraryPageProps) {
+  const isAntiSlop = useOptionalThemeContext()?.uiMode === "anti-slop";
+  const emptyCell = isAntiSlop ? "-" : "—";
+  const fieldId = useId();
   const [openCreate, setOpenCreate] = useState(false);
   const [name, setName] = useState("");
+  const [createError, setCreateError] = useState<string | null>(null);
   const [species, setSpecies] = useState("broiler");
   const [basis, setBasis] = useState<Basis>("as_fed");
   const [query, setQuery] = useState("");
@@ -93,8 +101,22 @@ export const RequirementLibraryPage = memo(function RequirementLibraryPage({
     });
   }, [requirements, query, groupFilter, language]);
 
+  const handleCloseCreate = () => {
+    setCreateError(null);
+    setOpenCreate(false);
+  };
+
   const handleCreate = () => {
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      setCreateError(
+        pickLang(
+          language,
+          "Nama profil kebutuhan wajib diisi.",
+          "Requirement profile name is required.",
+        ),
+      );
+      return;
+    }
     onCreateProfile({
       id: `custom-req-${Date.now()}`,
       name: name.trim(),
@@ -108,6 +130,7 @@ export const RequirementLibraryPage = memo(function RequirementLibraryPage({
       source: "Profil Kustom Pengguna",
     });
     setName("");
+    setCreateError(null);
     setOpenCreate(false);
   };
 
@@ -133,13 +156,19 @@ export const RequirementLibraryPage = memo(function RequirementLibraryPage({
             )}
           </p>
         </div>
-        <Button variant="primary" size="sm" onClick={() => setOpenCreate(true)}>
-          <Plus className="h-3.5 w-3.5" />
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => {
+            setCreateError(null);
+            setOpenCreate(true);
+          }}
+        >
+          <Plus className="h-3.5 w-3.5" aria-hidden="true" />
           <span>{pickLang(language, "Buat Profil Baru", "Create New Profile")}</span>
         </Button>
       </div>
 
-      {/* Bar Pencarian + Filter Kelompok Kompak (mendukung horizontal scroll) */}
       <div className="flex flex-wrap items-center justify-between gap-2.5">
         <div
           className="custom-scrollbar flex max-w-full gap-1.5 overflow-x-auto pb-0.5"
@@ -197,9 +226,12 @@ export const RequirementLibraryPage = memo(function RequirementLibraryPage({
                   }
                 }}
                 className={cn(
-                  "shrink-0 cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-[transform,background-color,color] duration-150 active:scale-[0.97] motion-reduce:transform-none",
+                  "min-h-11 shrink-0 cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-[transform,background-color,color] duration-150 md:min-h-0 motion-reduce:transform-none",
+                  !isAntiSlop && "active:scale-[0.97]",
                   active
-                    ? "border-transparent bg-[var(--color-primary)] text-[var(--text-on-primary)] shadow-[var(--shadow-neu-flat)]"
+                    ? isAntiSlop
+                      ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--text-on-primary)]"
+                      : "border-transparent bg-[var(--color-primary)] text-[var(--text-on-primary)] shadow-[var(--shadow-neu-flat)]"
                     : "border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]",
                 )}
               >
@@ -210,7 +242,10 @@ export const RequirementLibraryPage = memo(function RequirementLibraryPage({
         </div>
 
         <div className="relative min-w-60 flex-1 sm:max-w-80">
-          <Search className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-[var(--text-muted)]" />
+          <Search
+            className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-[var(--text-muted)]"
+            aria-hidden="true"
+          />
           <Input
             type="search"
             value={query}
@@ -230,7 +265,6 @@ export const RequirementLibraryPage = memo(function RequirementLibraryPage({
         </div>
       </div>
 
-      {/* Tabel Ringkas Standar Kebutuhan */}
       <Card interactive={false} className="selectable-panel overflow-hidden">
         <div className="custom-scrollbar max-h-[68vh] overflow-auto">
           <table className="w-full border-collapse text-left text-xs">
@@ -266,85 +300,146 @@ export const RequirementLibraryPage = memo(function RequirementLibraryPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border-subtle)]">
-              {filteredRequirements.map((req) => {
-                const isCurrent = req.id === activeRequirementId;
-                const cp = req.constraints.find((c) => c.nutrientId === "cp");
-                const me = req.constraints.find((c) => c.nutrientId === "me_poultry");
-                const tdn = req.constraints.find((c) => c.nutrientId === "tdn");
-                const ca = req.constraints.find((c) => c.nutrientId === "ca");
-                const p = req.constraints.find((c) => c.nutrientId === "p");
+              {filteredRequirements.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center">
+                    <p className="text-xs font-medium text-[var(--text-secondary)]">
+                      {requirements.length === 0
+                        ? pickLang(
+                            language,
+                            "Belum ada profil kebutuhan ternak. Buat profil baru untuk mulai menyusun standar.",
+                            "No livestock requirement profiles yet. Create a new profile to start.",
+                          )
+                        : pickLang(
+                            language,
+                            "Tidak ada standar kebutuhan ternak yang cocok dengan filter atau pencarian saat ini.",
+                            "No livestock requirement standards match the current filter or search.",
+                          )}
+                    </p>
+                    <div className="mt-3 flex justify-center gap-2">
+                      {(query.trim() !== "" || groupFilter !== "all") && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            setQuery("");
+                            setGroupFilter("all");
+                          }}
+                        >
+                          {pickLang(language, "Reset Filter", "Reset Filter")}
+                        </Button>
+                      )}
+                      {requirements.length === 0 && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => {
+                            setCreateError(null);
+                            setOpenCreate(true);
+                          }}
+                        >
+                          {pickLang(language, "Buat Profil Baru", "Create New Profile")}
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredRequirements.map((req) => {
+                  const isCurrent = req.id === activeRequirementId;
+                  const cp = req.constraints.find((c) => c.nutrientId === "cp");
+                  const me = req.constraints.find((c) => c.nutrientId === "me_poultry");
+                  const tdn = req.constraints.find((c) => c.nutrientId === "tdn");
+                  const ca = req.constraints.find((c) => c.nutrientId === "ca");
+                  const p = req.constraints.find((c) => c.nutrientId === "p");
 
-                const cpDigits = resolveDisplayDigits("%", "cp", decimalPlaces, cp?.min ?? cp?.max);
-                const tdnDigits = resolveDisplayDigits(
-                  "%",
-                  "tdn",
-                  decimalPlaces,
-                  tdn?.min ?? tdn?.max,
-                );
-                const caDigits = resolveDisplayDigits("%", "ca", decimalPlaces, ca?.min ?? ca?.max);
-                const pDigits = resolveDisplayDigits("%", "p", decimalPlaces, p?.min ?? p?.max);
+                  const cpDigits = resolveDisplayDigits(
+                    "%",
+                    "cp",
+                    decimalPlaces,
+                    cp?.min ?? cp?.max,
+                  );
+                  const tdnDigits = resolveDisplayDigits(
+                    "%",
+                    "tdn",
+                    decimalPlaces,
+                    tdn?.min ?? tdn?.max,
+                  );
+                  const caDigits = resolveDisplayDigits(
+                    "%",
+                    "ca",
+                    decimalPlaces,
+                    ca?.min ?? ca?.max,
+                  );
+                  const pDigits = resolveDisplayDigits("%", "p", decimalPlaces, p?.min ?? p?.max);
 
-                const energyLabel = me
-                  ? `${formatBoundCell(me.min, me.max, 0)} kcal`
-                  : tdn
-                    ? `${formatBoundCell(tdn.min, tdn.max, tdnDigits)}% TDN`
-                    : "—";
+                  const energyLabel = me
+                    ? `${formatBoundCell(me.min, me.max, 0, emptyCell)} kcal`
+                    : tdn
+                      ? `${formatBoundCell(tdn.min, tdn.max, tdnDigits, emptyCell)}% TDN`
+                      : emptyCell;
 
-                return (
-                  <tr
-                    key={req.id}
-                    className={cn(
-                      "transition-colors hover:bg-[var(--bg-sunken)]",
-                      isCurrent && "bg-[var(--status-success-soft)]",
-                    )}
-                  >
-                    <td className="px-3 py-2">
-                      <div className="font-semibold text-[var(--text-primary)]">
-                        {language === "id" ? req.name : (req.nameEn ?? req.name)}
-                      </div>
-                      <div className="text-[10px] text-[var(--text-muted)]">
-                        {getSpeciesLabelI18n(language, req.species)}
-                        {req.phase ? ` · ${req.phase}` : ""}
-                      </div>
-                    </td>
-                    <td className="px-2.5 py-2 whitespace-nowrap">
-                      <Badge tone={req.id.startsWith("sni-") ? "emerald" : "neutral"}>
-                        {extractShortSource(req)}
-                      </Badge>
-                    </td>
-                    <td className="px-2 py-2 text-center">
-                      <Badge tone={req.basis === "as_fed" ? "sky" : "emerald"}>
-                        {req.basis === "as_fed" ? "As-Fed" : pickLang(language, "BK", "DM")}
-                      </Badge>
-                    </td>
-                    <td className="px-2.5 py-2 text-right font-semibold tabular-nums text-[var(--text-primary)]">
-                      {cp ? formatBoundCell(cp.min, cp.max, cpDigits) : "—"}
-                    </td>
-                    <td className="px-2.5 py-2 text-right tabular-nums text-[var(--text-secondary)]">
-                      {energyLabel}
-                    </td>
-                    <td className="px-2.5 py-2 text-right whitespace-nowrap tabular-nums text-[var(--text-secondary)]">
-                      {ca ? formatBoundCell(ca.min, ca.max, caDigits) : "—"} /{" "}
-                      {p ? formatBoundCell(p.min, p.max, pDigits) : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <Button
-                        variant={isCurrent ? "secondary" : "primary"}
-                        size="sm"
-                        onClick={() => onSelectAndUse(req.id)}
-                        className="min-h-7 px-2.5 text-[11px] md:min-h-7"
-                      >
-                        {isCurrent && <Check className="h-3 w-3 text-[var(--status-success)]" />}
-                        <span>
-                          {isCurrent
-                            ? pickLang(language, "Aktif", "Active")
-                            : pickLang(language, "Gunakan", "Use")}
-                        </span>
-                      </Button>
-                    </td>
-                  </tr>
-                );
-              })}
+                  return (
+                    <tr
+                      key={req.id}
+                      className={cn(
+                        "transition-colors hover:bg-[var(--bg-sunken)]",
+                        isCurrent && "bg-[var(--status-success-soft)]",
+                      )}
+                    >
+                      <td className="px-3 py-2">
+                        <div className="font-semibold text-[var(--text-primary)]">
+                          {language === "id" ? req.name : (req.nameEn ?? req.name)}
+                        </div>
+                        <div className="text-[10px] text-[var(--text-muted)]">
+                          {getSpeciesLabelI18n(language, req.species)}
+                          {req.phase ? ` · ${req.phase}` : ""}
+                        </div>
+                      </td>
+                      <td className="px-2.5 py-2 whitespace-nowrap">
+                        <Badge tone={req.id.startsWith("sni-") ? "emerald" : "neutral"}>
+                          {extractShortSource(req, isAntiSlop)}
+                        </Badge>
+                      </td>
+                      <td className="px-2 py-2 text-center">
+                        <Badge tone={req.basis === "as_fed" ? "sky" : "emerald"}>
+                          {req.basis === "as_fed" ? "As-Fed" : pickLang(language, "BK", "DM")}
+                        </Badge>
+                      </td>
+                      <td className="px-2.5 py-2 text-right font-semibold tabular-nums text-[var(--text-primary)]">
+                        {cp ? formatBoundCell(cp.min, cp.max, cpDigits, emptyCell) : emptyCell}
+                      </td>
+                      <td className="px-2.5 py-2 text-right tabular-nums text-[var(--text-secondary)]">
+                        {energyLabel}
+                      </td>
+                      <td className="px-2.5 py-2 text-right whitespace-nowrap tabular-nums text-[var(--text-secondary)]">
+                        {ca ? formatBoundCell(ca.min, ca.max, caDigits, emptyCell) : emptyCell} /{" "}
+                        {p ? formatBoundCell(p.min, p.max, pDigits, emptyCell) : emptyCell}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <Button
+                          variant={isCurrent ? "secondary" : "primary"}
+                          size="sm"
+                          onClick={() => onSelectAndUse(req.id)}
+                          className="min-h-11 min-w-11 px-3 text-[11px] md:min-h-7 md:min-w-0 md:px-2.5"
+                        >
+                          {isCurrent && (
+                            <Check
+                              className="h-3 w-3 text-[var(--status-success)]"
+                              aria-hidden="true"
+                            />
+                          )}
+                          <span>
+                            {isCurrent
+                              ? pickLang(language, "Aktif", "Active")
+                              : pickLang(language, "Gunakan", "Use")}
+                          </span>
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -352,7 +447,7 @@ export const RequirementLibraryPage = memo(function RequirementLibraryPage({
 
       <SheetDialog
         open={openCreate}
-        onClose={() => setOpenCreate(false)}
+        onClose={handleCloseCreate}
         title={pickLang(
           language,
           "Buat Profil Kebutuhan Ternak Baru",
@@ -360,7 +455,7 @@ export const RequirementLibraryPage = memo(function RequirementLibraryPage({
         )}
         footer={
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setOpenCreate(false)}>
+            <Button variant="secondary" onClick={handleCloseCreate}>
               {pickLang(language, "Batal", "Cancel")}
             </Button>
             <Button variant="primary" onClick={handleCreate}>
@@ -370,13 +465,28 @@ export const RequirementLibraryPage = memo(function RequirementLibraryPage({
         }
       >
         <div className="space-y-3 text-xs">
+          {createError && (
+            <p
+              role="alert"
+              className="rounded-lg border border-[var(--status-danger-border)] bg-[var(--status-danger-soft)] p-3 font-medium text-[var(--status-danger)]"
+            >
+              {createError}
+            </p>
+          )}
           <div>
-            <label className="mb-1 block font-medium text-[var(--text-primary)]">
+            <label
+              htmlFor={`${fieldId}-name`}
+              className="mb-1 block font-medium text-[var(--text-primary)]"
+            >
               {pickLang(language, "Nama Profil / Fase", "Profile / Phase Name")}
             </label>
             <Input
+              id={`${fieldId}-name`}
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (createError) setCreateError(null);
+              }}
               placeholder={pickLang(
                 language,
                 "Mis. Itik Petelur Fase Layer…",
@@ -384,12 +494,16 @@ export const RequirementLibraryPage = memo(function RequirementLibraryPage({
               )}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block font-medium text-[var(--text-primary)]">
+              <label
+                htmlFor={`${fieldId}-species`}
+                className="mb-1 block font-medium text-[var(--text-primary)]"
+              >
                 {pickLang(language, "Komoditas / Spesies", "Species")}
               </label>
               <ThemedSelect
+                id={`${fieldId}-species`}
                 ariaLabel={pickLang(language, "Komoditas / Spesies", "Species")}
                 modalTitle={pickLang(language, "Pilih Komoditas / Spesies", "Select Species")}
                 value={species}
@@ -408,10 +522,14 @@ export const RequirementLibraryPage = memo(function RequirementLibraryPage({
               />
             </div>
             <div>
-              <label className="mb-1 block font-medium text-[var(--text-primary)]">
+              <label
+                htmlFor={`${fieldId}-basis`}
+                className="mb-1 block font-medium text-[var(--text-primary)]"
+              >
                 {pickLang(language, "Basis Standar", "Standard Basis")}
               </label>
               <ThemedSelect
+                id={`${fieldId}-basis`}
                 ariaLabel={pickLang(language, "Basis Standar", "Standard Basis")}
                 modalTitle={pickLang(language, "Pilih Basis Standar", "Select Standard Basis")}
                 value={basis}

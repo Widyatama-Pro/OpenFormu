@@ -3827,6 +3827,434 @@ export const KEARL_REQUIREMENTS: readonly Requirement[] = [
     source:
       "Kearl (1982) Table 14 (WORKING CATTLE - Heavy Work (8 h/d)) — BB 600 kg; DMI 12.3 kg/hr (2.1% BB); ME 25.8 Mcal; TDN 7.1 kg (57.7% BK); PK 848 g (6.89% BK); DP 418 g; Ca 17 g (0.14% BK); P 17 g (0.14% BK); Vit A 17k IU",
   },
+
+  // =========================================================================
+  // KEARL (1982) TABLE 11 — DOMBA (SHEEP: GROWING, EWES GESTATION/LACTATION)
+  // =========================================================================
+  {
+    id: "kearl82-t11-sheep-15-g050",
+    name: "Domba Pertumbuhan 15 kg · PBBH 50 g/hr (Kearl 1982)",
+    nameEn: "Growing Sheep 15 kg · 50 g/d Gain (Kearl 1982 Table 11)",
+    species: "sheep",
+    phase: "Pertumbuhan · BB 15 kg · PBBH 50 g/hr",
+    basis: "dry_matter",
+    constraints: [
+      { nutrientId: "cp", min: 9.8, idealTarget: 10.5, enabled: true },
+      { nutrientId: "tdn", min: 58.3, idealTarget: 60.5, enabled: true },
+      { nutrientId: "ca", min: 0.48, max: 0.95, idealTarget: 0.54, enabled: true },
+      { nutrientId: "p", min: 0.31, max: 0.65, idealTarget: 0.36, enabled: true },
+    ],
+    ratios: [
+      {
+        id: "ca-p",
+        label: "Kalsium : Fosfor (Ca:P)",
+        numerator: "ca",
+        denominator: "p",
+        min: 1.2,
+        max: 2.5,
+      },
+    ],
+    source:
+      "Kearl (1982) Table 11 Growing Sheep — BB 15 kg, PBBH 50 g/hr; DMI 0.48 kg/hr (BK 0,48 kg; 3.2% BB); ME 1.00 Mcal; TDN 0.28 kg (58.3% BK); PK 47 g (9.8% BK); Ca 2.3 g (0.48% BK); P 1.5 g (0.31% BK)",
+  },
+  {
+    id: "kearl82-t11-sheep-20-g100",
+    name: "Domba Pertumbuhan 20 kg · PBBH 100 g/hr (Kearl 1982)",
+    nameEn: "Growing Sheep 20 kg · 100 g/d Gain (Kearl 1982 Table 11)",
+    species: "sheep",
+    phase: "Pertumbuhan · BB 20 kg · PBBH 100 g/hr",
+    basis: "dry_matter",
+    constraints: [
+      { nutrientId: "cp", min: 10.7, idealTarget: 11.4, enabled: true },
+      { nutrientId: "tdn", min: 65.7, idealTarget: 68.0, enabled: true },
+      { nutrientId: "ca", min: 0.54, max: 1.0, idealTarget: 0.6, enabled: true },
+      { nutrientId: "p", min: 0.36, max: 0.7, idealTarget: 0.4, enabled: true },
+    ],
+    ratios: [
+      {
+        id: "ca-p",
+        label: "Kalsium : Fosfor (Ca:P)",
+        numerator: "ca",
+        denominator: "p",
+        min: 1.2,
+        max: 2.5,
+      },
+    ],
+    source:
+      "Kearl (1982) Table 11 Growing Sheep — BB 20 kg, PBBH 100 g/hr; DMI 0.70 kg/hr (BK 0,70 kg; 3.5% BB); ME 1.66 Mcal; TDN 0.46 kg (65.7% BK); PK 75 g (10.7% BK); Ca 3.8 g (0.54% BK); P 2.5 g (0.36% BK)",
+  },
+  {
+    id: "kearl82-t11-sheep-30-g150",
+    name: "Domba Penggemukan 30 kg · PBBH 150 g/hr (Kearl 1982)",
+    nameEn: "Finishing Sheep 30 kg · 150 g/d Gain (Kearl 1982 Table 11)",
+    species: "sheep",
+    phase: "Penggemukan · BB 30 kg · PBBH 150 g/hr",
+    basis: "dry_matter",
+    constraints: [
+      { nutrientId: "cp", min: 10.6, idealTarget: 11.3, enabled: true },
+      { nutrientId: "tdn", min: 69.5, idealTarget: 71.5, enabled: true },
+      { nutrientId: "ca", min: 0.51, max: 1.0, idealTarget: 0.56, enabled: true },
+      { nutrientId: "p", min: 0.34, max: 0.7, idealTarget: 0.38, enabled: true },
+    ],
+    ratios: [
+      {
+        id: "ca-p",
+        label: "Kalsium : Fosfor (Ca:P)",
+        numerator: "ca",
+        denominator: "p",
+        min: 1.2,
+        max: 2.5,
+      },
+    ],
+    source:
+      "Kearl (1982) Table 11 Finishing Sheep — BB 30 kg, PBBH 150 g/hr; DMI 1.05 kg/hr (BK 1,05 kg; 3.5% BB); ME 2.63 Mcal; TDN 0.73 kg (69.5% BK); PK 111 g (10.6% BK); Ca 5.4 g (0.51% BK); P 3.6 g (0.34% BK)",
+  },
+  {
+    id: "kearl82-t11-sheep-40-g150",
+    name: "Domba Penggemukan 40 kg · PBBH 150 g/hr (Kearl 1982)",
+    nameEn: "Finishing Sheep 40 kg · 150 g/d Gain (Kearl 1982 Table 11)",
+    species: "sheep",
+    phase: "Penggemukan · BB 40 kg · PBBH 150 g/hr",
+    basis: "dry_matter",
+    constraints: [
+      { nutrientId: "cp", min: 9.7, idealTarget: 10.4, enabled: true },
+      { nutrientId: "tdn", min: 67.4, idealTarget: 69.5, enabled: true },
+      { nutrientId: "ca", min: 0.43, max: 0.95, idealTarget: 0.48, enabled: true },
+      { nutrientId: "p", min: 0.31, max: 0.65, idealTarget: 0.35, enabled: true },
+    ],
+    ratios: [
+      {
+        id: "ca-p",
+        label: "Kalsium : Fosfor (Ca:P)",
+        numerator: "ca",
+        denominator: "p",
+        min: 1.2,
+        max: 2.5,
+      },
+    ],
+    source:
+      "Kearl (1982) Table 11 Finishing Sheep — BB 40 kg, PBBH 150 g/hr; DMI 1.32 kg/hr (BK 1,32 kg; 3.3% BB); ME 3.21 Mcal; TDN 0.89 kg (67.4% BK); PK 128 g (9.7% BK); Ca 5.7 g (0.43% BK); P 4.1 g (0.31% BK)",
+  },
+  {
+    id: "kearl82-t11-ewe-gest-40",
+    name: "Induk Domba Bunting Akhir 40 kg (Kearl 1982)",
+    nameEn: "Pregnant Ewe Last 6 Wk Gestation 40 kg (Kearl 1982 Table 11)",
+    species: "sheep",
+    phase: "Bunting 6 Mgg Terakhir · BB 40 kg",
+    basis: "dry_matter",
+    constraints: [
+      { nutrientId: "cp", min: 9.8, idealTarget: 10.5, enabled: true },
+      { nutrientId: "tdn", min: 58.6, idealTarget: 61.0, enabled: true },
+      { nutrientId: "ca", min: 0.35, max: 0.85, idealTarget: 0.4, enabled: true },
+      { nutrientId: "p", min: 0.27, max: 0.6, idealTarget: 0.31, enabled: true },
+    ],
+    ratios: [
+      {
+        id: "ca-p",
+        label: "Kalsium : Fosfor (Ca:P)",
+        numerator: "ca",
+        denominator: "p",
+        min: 1.2,
+        max: 2.5,
+      },
+    ],
+    source:
+      "Kearl (1982) Table 11 Ewes Last 6 Wk Gestation — BB 40 kg; DMI 1.33 kg/hr (BK 1,33 kg; 3.3% BB); ME 2.81 Mcal; TDN 0.78 kg (58.6% BK); PK 130 g (9.8% BK); Ca 4.6 g (0.35% BK); P 3.6 g (0.27% BK)",
+  },
+  {
+    id: "kearl82-t11-ewe-lact-40",
+    name: "Induk Domba Laktasi 40 kg (Kearl 1982)",
+    nameEn: "Lactating Ewe First 8–10 Wk 40 kg (Kearl 1982 Table 11)",
+    species: "sheep",
+    phase: "Laktasi 8–10 Mgg Pertama · BB 40 kg",
+    basis: "dry_matter",
+    constraints: [
+      { nutrientId: "cp", min: 11.4, idealTarget: 12.2, enabled: true },
+      { nutrientId: "tdn", min: 64.7, idealTarget: 67.0, enabled: true },
+      { nutrientId: "ca", min: 0.49, max: 0.95, idealTarget: 0.55, enabled: true },
+      { nutrientId: "p", min: 0.35, max: 0.7, idealTarget: 0.4, enabled: true },
+    ],
+    ratios: [
+      {
+        id: "ca-p",
+        label: "Kalsium : Fosfor (Ca:P)",
+        numerator: "ca",
+        denominator: "p",
+        min: 1.2,
+        max: 2.5,
+      },
+    ],
+    source:
+      "Kearl (1982) Table 11 Ewes Lactating First 8–10 Wk — BB 40 kg; DMI 1.70 kg/hr (BK 1,70 kg; 4.25% BB); ME 3.96 Mcal; TDN 1.10 kg (64.7% BK); PK 194 g (11.4% BK); Ca 8.3 g (0.49% BK); P 6.0 g (0.35% BK)",
+  },
+
+  // =========================================================================
+  // KEARL (1982) TABLE 12 — KAMBING (GOATS: GROWING, GESTATION, LACTATION)
+  // =========================================================================
+  {
+    id: "kearl82-t12-goat-15-g050",
+    name: "Kambing Pertumbuhan 15 kg · PBBH 50 g/hr (Kearl 1982)",
+    nameEn: "Growing Goats 15 kg · 50 g/d Gain (Kearl 1982 Table 12)",
+    species: "goat",
+    phase: "Pertumbuhan · BB 15 kg · PBBH 50 g/hr",
+    basis: "dry_matter",
+    constraints: [
+      { nutrientId: "cp", min: 9.6, idealTarget: 10.4, enabled: true },
+      { nutrientId: "tdn", min: 61.5, idealTarget: 64.0, enabled: true },
+      { nutrientId: "ca", min: 0.38, max: 0.85, idealTarget: 0.44, enabled: true },
+      { nutrientId: "p", min: 0.29, max: 0.6, idealTarget: 0.33, enabled: true },
+    ],
+    ratios: [
+      {
+        id: "ca-p",
+        label: "Kalsium : Fosfor (Ca:P)",
+        numerator: "ca",
+        denominator: "p",
+        min: 1.2,
+        max: 2.5,
+      },
+    ],
+    source:
+      "Kearl (1982) Table 12 Growing Goats — BB 15 kg, PBBH 50 g/hr; DMI 0.52 kg/hr (BK 0,52 kg; 3.5% BB); ME 1.15 Mcal; TDN 0.32 kg (61.5% BK); PK 50 g (9.6% BK); Ca 2.0 g (0.38% BK); P 1.5 g (0.29% BK)",
+  },
+  {
+    id: "kearl82-t12-goat-25-g100",
+    name: "Kambing Pertumbuhan 25 kg · PBBH 100 g/hr (Kearl 1982)",
+    nameEn: "Growing Goats 25 kg · 100 g/d Gain (Kearl 1982 Table 12)",
+    species: "goat",
+    phase: "Pertumbuhan · BB 25 kg · PBBH 100 g/hr",
+    basis: "dry_matter",
+    constraints: [
+      { nutrientId: "cp", min: 10.5, idealTarget: 11.2, enabled: true },
+      { nutrientId: "tdn", min: 67.5, idealTarget: 69.5, enabled: true },
+      { nutrientId: "ca", min: 0.41, max: 0.9, idealTarget: 0.46, enabled: true },
+      { nutrientId: "p", min: 0.31, max: 0.65, idealTarget: 0.35, enabled: true },
+    ],
+    ratios: [
+      {
+        id: "ca-p",
+        label: "Kalsium : Fosfor (Ca:P)",
+        numerator: "ca",
+        denominator: "p",
+        min: 1.2,
+        max: 2.5,
+      },
+    ],
+    source:
+      "Kearl (1982) Table 12 Growing Goats — BB 25 kg, PBBH 100 g/hr; DMI 0.80 kg/hr (BK 0,80 kg; 3.2% BB); ME 1.95 Mcal; TDN 0.54 kg (67.5% BK); PK 84 g (10.5% BK); Ca 3.3 g (0.41% BK); P 2.5 g (0.31% BK)",
+  },
+  {
+    id: "kearl82-t12-goat-30-g125",
+    name: "Kambing Penggemukan 30 kg · PBBH 125 g/hr (Kearl 1982)",
+    nameEn: "Finishing Goats 30 kg · 125 g/d Gain (Kearl 1982 Table 12)",
+    species: "goat",
+    phase: "Penggemukan · BB 30 kg · PBBH 125 g/hr",
+    basis: "dry_matter",
+    constraints: [
+      { nutrientId: "cp", min: 10.8, idealTarget: 11.5, enabled: true },
+      { nutrientId: "tdn", min: 68.8, idealTarget: 71.0, enabled: true },
+      { nutrientId: "ca", min: 0.42, max: 0.9, idealTarget: 0.47, enabled: true },
+      { nutrientId: "p", min: 0.31, max: 0.65, idealTarget: 0.35, enabled: true },
+    ],
+    ratios: [
+      {
+        id: "ca-p",
+        label: "Kalsium : Fosfor (Ca:P)",
+        numerator: "ca",
+        denominator: "p",
+        min: 1.2,
+        max: 2.5,
+      },
+    ],
+    source:
+      "Kearl (1982) Table 12 Finishing Goats — BB 30 kg, PBBH 125 g/hr; DMI 0.96 kg/hr (BK 0,96 kg; 3.2% BB); ME 2.38 Mcal; TDN 0.66 kg (68.8% BK); PK 104 g (10.8% BK); Ca 4.0 g (0.42% BK); P 3.0 g (0.31% BK)",
+  },
+  {
+    id: "kearl82-t12-doe-gest-35",
+    name: "Induk Kambing Bunting Akhir 35 kg (Kearl 1982)",
+    nameEn: "Pregnant Doe Late Gestation 35 kg (Kearl 1982 Table 12)",
+    species: "goat",
+    phase: "Bunting 2 Bln Terakhir · BB 35 kg",
+    basis: "dry_matter",
+    constraints: [
+      { nutrientId: "cp", min: 10.4, idealTarget: 11.1, enabled: true },
+      { nutrientId: "tdn", min: 60.7, idealTarget: 63.0, enabled: true },
+      { nutrientId: "ca", min: 0.38, max: 0.85, idealTarget: 0.44, enabled: true },
+      { nutrientId: "p", min: 0.28, max: 0.6, idealTarget: 0.32, enabled: true },
+    ],
+    ratios: [
+      {
+        id: "ca-p",
+        label: "Kalsium : Fosfor (Ca:P)",
+        numerator: "ca",
+        denominator: "p",
+        min: 1.2,
+        max: 2.5,
+      },
+    ],
+    source:
+      "Kearl (1982) Table 12 Pregnant Doe Late Gestation — BB 35 kg; DMI 1.22 kg/hr (BK 1,22 kg; 3.5% BB); ME 2.67 Mcal; TDN 0.74 kg (60.7% BK); PK 127 g (10.4% BK); Ca 4.6 g (0.38% BK); P 3.4 g (0.28% BK)",
+  },
+  {
+    id: "kearl82-t12-doe-lact-35-15l",
+    name: "Kambing Perah Laktasi 35 kg · 1.5 L Susu (Kearl 1982)",
+    nameEn: "Lactating Dairy Goat 35 kg · 1.5 kg Milk (Kearl 1982 Table 12)",
+    species: "goat",
+    phase: "Laktasi 1,5 L Susu (4% Lemak) · BB 35 kg",
+    basis: "dry_matter",
+    constraints: [
+      { nutrientId: "cp", min: 12.1, idealTarget: 12.8, enabled: true },
+      { nutrientId: "tdn", min: 64.9, idealTarget: 67.5, enabled: true },
+      { nutrientId: "ca", min: 0.45, max: 0.95, idealTarget: 0.52, enabled: true },
+      { nutrientId: "p", min: 0.33, max: 0.68, idealTarget: 0.38, enabled: true },
+    ],
+    ratios: [
+      {
+        id: "ca-p",
+        label: "Kalsium : Fosfor (Ca:P)",
+        numerator: "ca",
+        denominator: "p",
+        min: 1.2,
+        max: 2.5,
+      },
+    ],
+    source:
+      "Kearl (1982) Table 12 Lactating Goat — BB 35 kg + 1,5 kg susu 4% lemak; DMI 1.54 kg/hr (BK 1,54 kg; 4.4% BB); ME 3.60 Mcal; TDN 1.00 kg (64.9% BK); PK 186 g (12.1% BK); Ca 7.0 g (0.45% BK); P 5.1 g (0.33% BK)",
+  },
+
+  // =========================================================================
+  // KEARL (1982) TABLE 16 — KERBAU (DOMESTIC BUFFALOES: GROWING, MILK, WORK)
+  // =========================================================================
+  {
+    id: "kearl82-t16-buffalo-200-g050",
+    name: "Kerbau Pertumbuhan 200 kg · PBBH 0.50 kg/hr (Kearl 1982)",
+    nameEn: "Growing Buffalo 200 kg · 0.50 kg/d Gain (Kearl 1982 Table 16)",
+    species: "buffalo",
+    phase: "Pertumbuhan · BB 200 kg · PBBH 0,50 kg/hr",
+    basis: "dry_matter",
+    constraints: [
+      { nutrientId: "cp", min: 10.4, idealTarget: 11.1, enabled: true },
+      { nutrientId: "tdn", min: 57.1, idealTarget: 59.5, enabled: true },
+      { nutrientId: "ca", min: 0.31, max: 0.85, idealTarget: 0.36, enabled: true },
+      { nutrientId: "p", min: 0.25, max: 0.6, idealTarget: 0.29, enabled: true },
+    ],
+    ratios: [
+      {
+        id: "ca-p",
+        label: "Kalsium : Fosfor (Ca:P)",
+        numerator: "ca",
+        denominator: "p",
+        min: 1.2,
+        max: 2.5,
+      },
+    ],
+    source:
+      "Kearl (1982) Table 16 Domestic Buffaloes — BB 200 kg, PBBH 0,50 kg/hr; DMI 4.9 kg/hr (BK 4,90 kg; 2.45% BB); ME 10.1 Mcal; TDN 2.8 kg (57.1% BK); PK 510 g (10.4% BK); Ca 15 g (0.31% BK); P 12 g (0.25% BK)",
+  },
+  {
+    id: "kearl82-t16-buffalo-300-g075",
+    name: "Kerbau Penggemukan 300 kg · PBBH 0.75 kg/hr (Kearl 1982)",
+    nameEn: "Fattening Buffalo 300 kg · 0.75 kg/d Gain (Kearl 1982 Table 16)",
+    species: "buffalo",
+    phase: "Penggemukan · BB 300 kg · PBBH 0,75 kg/hr",
+    basis: "dry_matter",
+    constraints: [
+      { nutrientId: "cp", min: 10.6, idealTarget: 11.3, enabled: true },
+      { nutrientId: "tdn", min: 62.5, idealTarget: 64.5, enabled: true },
+      { nutrientId: "ca", min: 0.34, max: 0.85, idealTarget: 0.4, enabled: true },
+      { nutrientId: "p", min: 0.27, max: 0.6, idealTarget: 0.31, enabled: true },
+    ],
+    ratios: [
+      {
+        id: "ca-p",
+        label: "Kalsium : Fosfor (Ca:P)",
+        numerator: "ca",
+        denominator: "p",
+        min: 1.2,
+        max: 2.5,
+      },
+    ],
+    source:
+      "Kearl (1982) Table 16 Domestic Buffaloes — BB 300 kg, PBBH 0,75 kg/hr; DMI 6.4 kg/hr (BK 6,40 kg; 2.13% BB); ME 14.4 Mcal; TDN 4.0 kg (62.5% BK); PK 678 g (10.6% BK); Ca 22 g (0.34% BK); P 17 g (0.27% BK)",
+  },
+  {
+    id: "kearl82-t16-buffalo-400-g075",
+    name: "Kerbau Penggemukan 400 kg · PBBH 0.75 kg/hr (Kearl 1982)",
+    nameEn: "Fattening Buffalo 400 kg · 0.75 kg/d Gain (Kearl 1982 Table 16)",
+    species: "buffalo",
+    phase: "Penggemukan · BB 400 kg · PBBH 0,75 kg/hr",
+    basis: "dry_matter",
+    constraints: [
+      { nutrientId: "cp", min: 9.8, idealTarget: 10.5, enabled: true },
+      { nutrientId: "tdn", min: 60.2, idealTarget: 62.5, enabled: true },
+      { nutrientId: "ca", min: 0.3, max: 0.85, idealTarget: 0.35, enabled: true },
+      { nutrientId: "p", min: 0.24, max: 0.6, idealTarget: 0.28, enabled: true },
+    ],
+    ratios: [
+      {
+        id: "ca-p",
+        label: "Kalsium : Fosfor (Ca:P)",
+        numerator: "ca",
+        denominator: "p",
+        min: 1.2,
+        max: 2.5,
+      },
+    ],
+    source:
+      "Kearl (1982) Table 16 Domestic Buffaloes — BB 400 kg, PBBH 0,75 kg/hr; DMI 8.3 kg/hr (BK 8,30 kg; 2.08% BB); ME 18.0 Mcal; TDN 5.0 kg (60.2% BK); PK 815 g (9.8% BK); Ca 25 g (0.30% BK); P 20 g (0.24% BK)",
+  },
+  {
+    id: "kearl82-t16-buffalo-lact-450-8l",
+    name: "Kerbau Perah Laktasi 450 kg · 8 L Susu 7% Lemak (Kearl 1982)",
+    nameEn: "Lactating Buffalo 450 kg · 8 kg Milk 7% Fat (Kearl 1982 Table 16)",
+    species: "buffalo",
+    phase: "Laktasi 8 L Susu (Lemak 7%) · BB 450 kg",
+    basis: "dry_matter",
+    constraints: [
+      { nutrientId: "cp", min: 11.8, idealTarget: 12.6, enabled: true },
+      { nutrientId: "tdn", min: 64.5, idealTarget: 67.0, enabled: true },
+      { nutrientId: "ca", min: 0.41, max: 0.95, idealTarget: 0.47, enabled: true },
+      { nutrientId: "p", min: 0.31, max: 0.65, idealTarget: 0.35, enabled: true },
+    ],
+    ratios: [
+      {
+        id: "ca-p",
+        label: "Kalsium : Fosfor (Ca:P)",
+        numerator: "ca",
+        denominator: "p",
+        min: 1.2,
+        max: 2.5,
+      },
+    ],
+    source:
+      "Kearl (1982) Table 16 & 17 Lactating Buffaloes — BB 450 kg + 8 kg susu (7% lemak); DMI 11.0 kg/hr (BK 11,0 kg; 2.44% BB); TDN 7.1 kg (64.5% BK); PK 1298 g (11.8% BK); Ca 45 g (0.41% BK); P 34 g (0.31% BK)",
+  },
+  {
+    id: "kearl82-t16-buffalo-work-500-heavy",
+    name: "Kerbau Kerja Berat 500 kg · 8 Jam/hr (Kearl 1982)",
+    nameEn: "Working Buffalo 500 kg · Heavy Work 8 h/d (Kearl 1982 Table 16)",
+    species: "buffalo",
+    phase: "Kerja Berat (8 jam/hr) · BB 500 kg",
+    basis: "dry_matter",
+    constraints: [
+      { nutrientId: "cp", min: 7.4, idealTarget: 8.2, enabled: true },
+      { nutrientId: "tdn", min: 58.5, idealTarget: 61.0, enabled: true },
+      { nutrientId: "ca", min: 0.18, max: 0.85, idealTarget: 0.24, enabled: true },
+      { nutrientId: "p", min: 0.16, max: 0.6, idealTarget: 0.21, enabled: true },
+    ],
+    ratios: [
+      {
+        id: "ca-p",
+        label: "Kalsium : Fosfor (Ca:P)",
+        numerator: "ca",
+        denominator: "p",
+        min: 1.1,
+        max: 2.5,
+      },
+    ],
+    source:
+      "Kearl (1982) Table 16 Working Buffaloes (Heavy Work 8 h/d) — BB 500 kg; DMI 10.6 kg/hr (BK 10,6 kg; 2.12% BB); ME 22.3 Mcal; TDN 6.2 kg (58.5% BK); PK 784 g (7.4% BK); Ca 19 g (0.18% BK); P 17 g (0.16% BK)",
+  },
 ];
 
 /**

@@ -4,7 +4,7 @@
  * based on active background luminance, with optional AMOLED pure-black override.
  */
 
-import type { ResolvedThemeMode, ThemePaletteId } from "../types";
+import type { ResolvedThemeMode, ThemePaletteId, UiMode } from "../types";
 import { resolveActiveThemeColors } from "./pwa-theme-sync";
 
 export type CapacitorBarStyle = "DARK" | "LIGHT" | "DEFAULT";
@@ -13,6 +13,7 @@ export interface AndroidThemeBridgeOptions {
   readonly paletteId?: ThemePaletteId;
   readonly mode?: ResolvedThemeMode;
   readonly amoledPureBlack?: boolean;
+  readonly uiMode?: UiMode;
   readonly uiEnhancer?: boolean;
   readonly overlayWebView?: boolean;
   readonly resolvedCanvasHex?: string;
@@ -175,8 +176,10 @@ export async function syncAndroidSystemBars(
   }
 
   const navBgColor = mode === "dark" && options.amoledPureBlack ? "#000000" : canvasHex;
-  // When UI Enhancer is OFF in Light Mode, AppShell header uses dark --shell-chrome-bg (--color-primary)
-  const statusBgColor = options.uiEnhancer === false && mode === "light" ? primaryHex : navBgColor;
+  // Biasa light mode renders a dark --shell-chrome-bg header; Enhanced and Anti-Slop sit on canvasHex
+  const isBiasaMode =
+    options.uiMode !== undefined ? options.uiMode === "biasa" : options.uiEnhancer === false;
+  const statusBgColor = isBiasaMode && mode === "light" ? primaryHex : navBgColor;
   const { iconStyle, isDarkBackground, luminance } = resolveSystemBarAppearance(statusBgColor);
   const navAppearance = resolveSystemBarAppearance(navBgColor);
   let appliedToCapacitor = false;

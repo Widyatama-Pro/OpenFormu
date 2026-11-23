@@ -9,7 +9,7 @@ import {
   type KeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { ChevronDown, Columns3, GripVertical, RotateCcw, Sliders } from "lucide-react";
+import { ChevronDown, Columns3, GripVertical, RotateCcw, Sliders, X } from "lucide-react";
 import { motion } from "motion/react";
 import { resolveFeedClass } from "../../data/feed-classes";
 import { MOCK_NUTRIENTS } from "../../data/mock-state";
@@ -63,8 +63,24 @@ const NDF_NUTRIENT_IDS = new Set(["ndf", "adf"]);
 const BETN_NUTRIENT_IDS = new Set(["betn"]);
 
 const MIN_NAME_COL_WIDTH = 96;
-const MAX_NAME_COL_WIDTH = 340;
-const DEFAULT_NAME_COL_WIDTH = 168;
+const MAX_NAME_COL_WIDTH = 420;
+const DEFAULT_NAME_COL_WIDTH = 180;
+
+function isViewportMobile(): boolean {
+  if (typeof window === "undefined") return false;
+  if (typeof window.matchMedia === "function" && window.matchMedia("(max-width: 767px)").matches) {
+    return true;
+  }
+  return window.innerWidth < 768;
+}
+
+function getDialogFocusables(container: HTMLElement): HTMLElement[] {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ),
+  ).filter((el) => !el.closest('[hidden], [aria-hidden="true"]'));
+}
 
 interface CoreColumnVisibility {
   readonly price: boolean;
@@ -82,6 +98,7 @@ interface IngredientTableRowProps {
   readonly visibleNutrients: readonly Nutrient[];
   readonly decimalPlaces: 0 | 1 | 2;
   readonly simpleMode: boolean;
+  readonly isAntiSlop: boolean;
   readonly language: AppLanguage;
   readonly onUpdateIngredient: (id: string, patch: Partial<Ingredient>) => void;
   readonly onResetPriceOverride: (id: string) => void;
@@ -102,6 +119,7 @@ const IngredientTableRow = memo(function IngredientTableRow({
   visibleNutrients,
   decimalPlaces,
   simpleMode,
+  isAntiSlop,
   language,
   onUpdateIngredient,
   onResetPriceOverride,
@@ -129,14 +147,21 @@ const IngredientTableRow = memo(function IngredientTableRow({
         !isActive && "opacity-55",
       )}
     >
-      <td className="w-10 border-r border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--glass-sticky-bg,var(--bg-surface-elevated))] px-1.5 py-1.5 text-center backdrop-blur-md transition-colors group-hover:bg-[var(--glass-row-hover,var(--bg-surface))] md:sticky md:left-0 md:z-10">
-        <input
-          type="checkbox"
-          checked={isActive}
-          aria-label={`Aktifkan ${ing.name}`}
-          onChange={(e) => onUpdateIngredient(ing.id, { isActive: e.target.checked })}
-          className="h-4 w-4 cursor-pointer rounded border-[var(--border-subtle)] accent-[var(--color-primary)]"
-        />
+      <td
+        className={cn(
+          "w-11 border-r border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--glass-sticky-bg,var(--bg-surface-elevated))] px-1 py-1 text-center transition-colors group-hover:bg-[var(--glass-row-hover,var(--bg-surface))] md:sticky md:left-0 md:z-10 md:w-10 md:px-1.5 md:py-1.5",
+          !isAntiSlop && "backdrop-blur-md",
+        )}
+      >
+        <label className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center md:min-h-0 md:min-w-0">
+          <input
+            type="checkbox"
+            checked={isActive}
+            aria-label={`Aktifkan ${ing.name}`}
+            onChange={(e) => onUpdateIngredient(ing.id, { isActive: e.target.checked })}
+            className="h-4 w-4 cursor-pointer rounded border-[var(--border-subtle)] accent-[var(--color-primary)]"
+          />
+        </label>
       </td>
 
       <td
@@ -146,12 +171,22 @@ const IngredientTableRow = memo(function IngredientTableRow({
           maxWidth: `${nameColWidth}px`,
         }}
         title={displayName}
-        className="border-r border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--glass-sticky-bg,var(--bg-surface-elevated))] px-2 py-1.5 shadow-[4px_0_12px_-4px_rgba(0,0,0,0.08)] backdrop-blur-md transition-colors group-hover:bg-[var(--glass-row-hover,var(--bg-surface))] md:sticky md:left-10 md:z-10"
+        className={cn(
+          "border-r border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--glass-sticky-bg,var(--bg-surface-elevated))] px-2 py-1.5 transition-colors group-hover:bg-[var(--glass-row-hover,var(--bg-surface))] md:sticky md:left-10 md:z-10",
+          !isAntiSlop && "shadow-[4px_0_12px_-4px_rgba(0,0,0,0.08)] backdrop-blur-md",
+        )}
       >
         <div className="flex items-center justify-between gap-1.5">
           <div className="flex min-w-0 items-center gap-1.5">
             <FeedClassIcon code={feedClass} language={language} />
-            <span className="truncate font-semibold text-[var(--text-primary)]">{displayName}</span>
+            <span
+              className={cn(
+                "font-semibold text-[var(--text-primary)]",
+                nameColWidth >= 240 ? " leading-snug break-words whitespace-normal" : "truncate",
+              )}
+            >
+              {displayName}
+            </span>
           </div>
           {!compactName && (
             <Badge tone={ing.basis === "as_fed" ? "neutral" : "emerald"}>
@@ -191,9 +226,14 @@ const IngredientTableRow = memo(function IngredientTableRow({
                 onClick={() => onResetPriceOverride(ing.id)}
                 title={`Reset ke harga pasar (${formatCurrencyIdr(ing.pricePerKg)})`}
                 aria-label={`Reset harga pasar ${ing.name}`}
-                className="neu-pill-btn cursor-pointer rounded-md p-1 text-[var(--status-warning)]"
+                className={cn(
+                  "inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-md p-1 text-[var(--status-warning)] md:min-h-7 md:min-w-7",
+                  isAntiSlop
+                    ? "border border-[var(--border-strong)] bg-[var(--bg-surface-elevated)] hover:border-[var(--color-primary)]"
+                    : "neu-pill-btn",
+                )}
               >
-                <RotateCcw className="h-3.5 w-3.5" />
+                <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             )}
           </div>
@@ -328,9 +368,14 @@ const IngredientTableRow = memo(function IngredientTableRow({
           type="button"
           onClick={() => onOpenDetail(ing)}
           aria-label={`Edit detail ${ing.name}`}
-          className="neu-pill-btn inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-[var(--text-secondary)]"
+          className={cn(
+            "inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-md text-[var(--text-secondary)] md:h-7 md:w-7 md:min-h-0 md:min-w-0",
+            isAntiSlop
+              ? "border border-[var(--border-strong)] bg-[var(--bg-surface-elevated)] hover:border-[var(--color-primary)] hover:text-[var(--text-primary)]"
+              : "neu-pill-btn",
+          )}
         >
-          <Sliders className="h-3.5 w-3.5" />
+          <Sliders className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
       </td>
     </tr>
@@ -370,7 +415,8 @@ export const IngredientDesktopTable = memo(function IngredientDesktopTable({
   onBatchIngredientsUpdate,
 }: IngredientDesktopTableProps) {
   const themeCtx = useOptionalThemeContext();
-  const useGpuFlip = (themeCtx?.motionEngine ?? "gpu_flip") === "gpu_flip";
+  const isAntiSlop = themeCtx?.uiMode === "anti-slop";
+  const useGpuFlip = !isAntiSlop && (themeCtx?.motionEngine ?? "gpu_flip") === "gpu_flip";
   const [pasteNotice, setPasteNotice] = useState<{
     readonly text: string;
     readonly warnings: readonly string[];
@@ -382,30 +428,87 @@ export const IngredientDesktopTable = memo(function IngredientDesktopTable({
   );
   const activeTier: TableViewTier = tableViewTier ?? (showAdvanceColumns ? "advanced" : localTier);
 
-  // Per-column user overrides on top of the active tier default
   const [colOverrides, setColOverrides] = useState<Readonly<Record<string, boolean>>>({});
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState<boolean>(isViewportMobile);
 
   const popoverRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef<{ startX: number; startWidth: number } | null>(null);
+
+  const closePopover = useCallback((options: { readonly restoreFocus: boolean }) => {
+    setPopoverOpen(false);
+    if (options.restoreFocus) {
+      triggerRef.current?.focus();
+    }
+  }, []);
 
   useEffect(() => {
     if (!popoverOpen) return;
-    const handleOutside = (event: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
-        setPopoverOpen(false);
+    setIsMobileViewport(isViewportMobile());
+
+    const focusInitial = () => {
+      const dialogEl = dialogRef.current;
+      if (!dialogEl) return;
+      if (!dialogEl.contains(document.activeElement)) {
+        const focusables = getDialogFocusables(dialogEl);
+        (focusables[0] ?? dialogEl).focus();
       }
     };
-    const handleEsc = (event: KeyboardEvent | globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") setPopoverOpen(false);
+    focusInitial();
+    const rafId = requestAnimationFrame(focusInitial);
+
+    const handleResize = () => setIsMobileViewport(isViewportMobile());
+    const handleOutside = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (triggerRef.current?.contains(target)) return;
+      if (dialogRef.current?.contains(target)) return;
+      closePopover({ restoreFocus: false });
     };
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        closePopover({ restoreFocus: true });
+        return;
+      }
+      if (event.key === "Tab" && dialogRef.current) {
+        const focusables = getDialogFocusables(dialogRef.current);
+        if (focusables.length === 0) {
+          event.preventDefault();
+          dialogRef.current.focus();
+          return;
+        }
+        const activeEl =
+          document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        const first = focusables[0]!;
+        const last = focusables[focusables.length - 1]!;
+        if (event.shiftKey) {
+          if (!activeEl || activeEl === first || !dialogRef.current.contains(activeEl)) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            last.focus();
+          }
+        } else if (!activeEl || activeEl === last || !dialogRef.current.contains(activeEl)) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          first.focus();
+        }
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
     window.addEventListener("mousedown", handleOutside);
-    window.addEventListener("keydown", handleEsc);
+    window.addEventListener("keydown", handleKeyDown, true);
     return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("resize", handleResize);
       window.removeEventListener("mousedown", handleOutside);
-      window.removeEventListener("keydown", handleEsc);
+      window.removeEventListener("keydown", handleKeyDown, true);
     };
-  }, [popoverOpen]);
+  }, [popoverOpen, closePopover]);
 
   const handleSelectTier = useCallback(
     (nextTier: TableViewTier) => {
@@ -602,8 +705,14 @@ export const IngredientDesktopTable = memo(function IngredientDesktopTable({
         scrollMaxHeightClass ? "min-h-0" : "h-full min-h-0",
       )}
     >
-      {/* Kontrol 1 Baris Ringkas: Segmented Tier (Dasar / Standar / Lanjutan) + Popover Kolom */}
-      <div className="acrylic-subcard flex flex-wrap items-center justify-between gap-2 rounded-xl px-2.5 py-1.5 text-[11px]">
+      <div
+        className={cn(
+          "flex flex-wrap items-center justify-between gap-2 rounded-xl px-2.5 py-1.5 text-[11px]",
+          isAntiSlop
+            ? "border border-[var(--border-subtle)] bg-[var(--bg-surface)]"
+            : "acrylic-subcard",
+        )}
+      >
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-semibold text-[var(--text-secondary)]">
             {pickLang(language, "Tampilan Kolom:", "Column View:")}
@@ -611,7 +720,12 @@ export const IngredientDesktopTable = memo(function IngredientDesktopTable({
           <div
             role="group"
             aria-label={pickLang(language, "Tingkat tampilan kolom tabel", "Table column tier")}
-            className="inline-flex rounded-xl border border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--bg-sunken)]/70 p-0.5"
+            className={cn(
+              "inline-flex rounded-xl p-0.5",
+              isAntiSlop
+                ? "border border-[var(--border-subtle)] bg-[var(--bg-sunken)]"
+                : "border border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--bg-sunken)]/70",
+            )}
           >
             {(
               [
@@ -653,11 +767,14 @@ export const IngredientDesktopTable = memo(function IngredientDesktopTable({
                   title={t.hint}
                   onClick={() => handleSelectTier(t.id)}
                   className={cn(
-                    "elastic-size-box relative cursor-pointer rounded-lg px-2.5 py-0.5 text-[11px] font-semibold transition-[transform,color] duration-150 active:scale-[0.97] motion-reduce:transform-none",
+                    "relative min-h-11 cursor-pointer rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-[transform,color] duration-150 md:min-h-7 md:py-0.5 motion-reduce:transform-none",
+                    !isAntiSlop && "elastic-size-box active:scale-[0.97]",
                     active
                       ? t.id === "advanced"
                         ? "text-[var(--text-on-primary)]"
-                        : "text-[var(--status-success)]"
+                        : isAntiSlop
+                          ? "text-[var(--text-primary)]"
+                          : "text-[var(--status-success)]"
                       : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                   )}
                 >
@@ -680,8 +797,10 @@ export const IngredientDesktopTable = memo(function IngredientDesktopTable({
                         className={cn(
                           "pointer-events-none absolute inset-0 rounded-lg",
                           t.id === "advanced"
-                            ? "bg-[var(--color-primary)] shadow-[var(--shadow-neu-flat)]"
-                            : "bg-[var(--bg-surface-elevated)] shadow-[var(--shadow-neu-flat)]",
+                            ? "bg-[var(--color-primary)]"
+                            : isAntiSlop
+                              ? "border border-[var(--color-primary)] bg-[var(--bg-surface-elevated)]"
+                              : "bg-[var(--bg-surface-elevated)] shadow-[var(--shadow-neu-flat)]",
                         )}
                       />
                     ))}
@@ -692,23 +811,34 @@ export const IngredientDesktopTable = memo(function IngredientDesktopTable({
           </div>
         </div>
 
-        {/* Tombol Popover Kolom Terkelompok */}
         <div className="relative" ref={popoverRef}>
           <button
+            ref={triggerRef}
             type="button"
             aria-expanded={popoverOpen}
             aria-haspopup="dialog"
-            onClick={() => setPopoverOpen((prev) => !prev)}
+            onClick={() => {
+              if (popoverOpen) {
+                closePopover({ restoreFocus: false });
+              } else {
+                setIsMobileViewport(isViewportMobile());
+                setPopoverOpen(true);
+              }
+            }}
             className={cn(
-              "neu-pill-btn inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-[var(--text-primary)]",
+              "inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-[var(--text-primary)] md:min-h-7",
+              isAntiSlop
+                ? "border border-[var(--border-strong)] bg-[var(--bg-surface-elevated)] hover:border-[var(--color-primary)]"
+                : "neu-pill-btn",
               popoverOpen && "border-[var(--color-primary)] bg-[var(--bg-surface-elevated)]",
             )}
           >
-            <Columns3 className="h-3.5 w-3.5 text-[var(--color-primary)]" />
+            <Columns3 className="h-3.5 w-3.5 text-[var(--color-primary)]" aria-hidden="true" />
             <span>
               {pickLang(language, "Kolom", "Columns")} ({visibleColCount}/{totalColCount})
             </span>
             <ChevronDown
+              aria-hidden="true"
               className={cn(
                 "h-3 w-3 text-[var(--text-muted)] transition-transform duration-150",
                 popoverOpen && "rotate-180",
@@ -716,93 +846,143 @@ export const IngredientDesktopTable = memo(function IngredientDesktopTable({
             />
           </button>
 
-          {popoverOpen && (
-            <div
-              role="dialog"
-              aria-label={pickLang(
-                language,
-                "Pilih kolom tabel yang ditampilkan",
-                "Toggle table columns",
-              )}
-              className="absolute right-0 z-40 mt-1.5 w-72 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-elevated)] p-3 text-xs shadow-[0_14px_34px_-10px_rgba(0,0,0,0.28)] sm:w-80"
-            >
-              <div className="mb-2 flex items-center justify-between border-b border-[var(--border-subtle)] pb-1.5">
-                <span className="font-bold text-[var(--text-primary)]">
-                  {pickLang(language, "Atur Kolom Tabel", "Customize Table Columns")}
-                </span>
-                {hasCustomOverrides && (
-                  <button
-                    type="button"
-                    onClick={() => setColOverrides({})}
-                    className="cursor-pointer rounded px-1.5 py-0.5 text-[10px] font-semibold text-[var(--status-success)] hover:bg-[var(--status-success-soft)]"
-                  >
-                    {pickLang(language, "Reset", "Reset")}
-                  </button>
-                )}
-              </div>
-
-              <div className="custom-scrollbar max-h-64 space-y-2.5 overflow-y-auto overscroll-contain pr-1">
-                <div>
-                  <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
-                    {pickLang(language, "Inti & Batasan", "Core & Bounds")}
-                  </p>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {coreToggleItems.map((col) => {
-                      const checked = isColVisible(col.id);
-                      return (
-                        <label
-                          key={col.id}
-                          className="inline-flex cursor-pointer items-center gap-1.5 text-[11px] font-medium text-[var(--text-primary)] select-none"
+          {popoverOpen &&
+            (() => {
+              const dialogBody = (
+                <div
+                  ref={dialogRef}
+                  tabIndex={-1}
+                  role="dialog"
+                  aria-modal={isMobileViewport ? "true" : undefined}
+                  aria-label={pickLang(
+                    language,
+                    "Pilih kolom tabel yang ditampilkan",
+                    "Toggle table columns",
+                  )}
+                  onClick={(e) => e.stopPropagation()}
+                  className={cn(
+                    "bg-[var(--bg-surface-elevated)] p-3 text-xs focus:outline-none",
+                    isMobileViewport
+                      ? cn(
+                          "w-full border-t p-4",
+                          isAntiSlop
+                            ? "rounded-t-xl border-[var(--border-strong)] shadow-[var(--shadow-neu-elevated)]"
+                            : "rounded-t-2xl border-[var(--border-subtle)] shadow-[0_-18px_48px_-12px_rgba(0,0,0,0.45)]",
+                        )
+                      : cn(
+                          "absolute right-0 z-40 mt-1.5 w-72 max-w-[calc(100vw-2rem)] rounded-xl border sm:w-80",
+                          isAntiSlop
+                            ? "border-[var(--border-strong)] shadow-[var(--shadow-neu-elevated)]"
+                            : "border-[var(--border-subtle)] shadow-[0_14px_34px_-10px_rgba(0,0,0,0.28)]",
+                        ),
+                  )}
+                >
+                  <div className="mb-2 flex items-center justify-between gap-2 border-b border-[var(--border-subtle)] pb-1.5">
+                    <span className="font-bold text-[var(--text-primary)]">
+                      {pickLang(language, "Atur Kolom Tabel", "Customize Table Columns")}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {hasCustomOverrides && (
+                        <button
+                          type="button"
+                          onClick={() => setColOverrides({})}
+                          className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded px-2.5 text-[10px] font-semibold text-[var(--status-success)] hover:bg-[var(--status-success-soft)] md:min-h-7 md:min-w-0 md:px-1.5"
                         >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => toggleColumn(col.id)}
-                            className="h-3.5 w-3.5 cursor-pointer rounded border-[var(--border-subtle)] accent-[var(--color-primary)]"
-                          />
-                          <span>{col.label}</span>
-                        </label>
-                      );
-                    })}
+                          {pickLang(language, "Reset", "Reset")}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => closePopover({ restoreFocus: true })}
+                        aria-label={pickLang(
+                          language,
+                          "Tutup pengatur kolom",
+                          "Close column picker",
+                        )}
+                        className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-lg border border-[var(--border-strong)] bg-[var(--bg-surface)] text-[var(--text-primary)] hover:bg-[var(--bg-sunken)] md:min-h-7 md:min-w-7"
+                      >
+                        <X className="h-3.5 w-3.5" aria-hidden="true" />
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                {groupedNutrients.map(([groupKey, nuts]) => {
-                  const groupMeta =
-                    TIER_GROUP_LABEL[groupKey as NutrientTier | "custom"] ?? TIER_GROUP_LABEL.basic;
-                  return (
-                    <div key={groupKey} className="border-t border-[var(--border-subtle)] pt-2">
+                  <div className="custom-scrollbar max-h-64 space-y-2.5 overflow-y-auto overscroll-contain pr-1">
+                    <div>
                       <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
-                        {language === "id" ? groupMeta.id : groupMeta.en}
+                        {pickLang(language, "Inti & Batasan", "Core & Bounds")}
                       </p>
                       <div className="grid grid-cols-2 gap-1.5">
-                        {nuts.map((nut) => {
-                          const checked = isColVisible(nut.id);
-                          const shortLabel = getNutrientDisplayName(nut, language, simpleMode);
-                          const fullName = getNutrientFullName(nut, language);
+                        {coreToggleItems.map((col) => {
+                          const checked = isColVisible(col.id);
                           return (
                             <label
-                              key={nut.id}
-                              title={fullName}
-                              className="inline-flex cursor-pointer items-center gap-1.5 text-[11px] font-medium text-[var(--text-primary)] select-none"
+                              key={col.id}
+                              className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 text-[11px] font-medium text-[var(--text-primary)] select-none md:min-h-0"
                             >
                               <input
                                 type="checkbox"
                                 checked={checked}
-                                onChange={() => toggleColumn(nut.id)}
+                                onChange={() => toggleColumn(col.id)}
                                 className="h-3.5 w-3.5 cursor-pointer rounded border-[var(--border-subtle)] accent-[var(--color-primary)]"
                               />
-                              <span className="truncate">{shortLabel}</span>
+                              <span>{col.label}</span>
                             </label>
                           );
                         })}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+
+                    {groupedNutrients.map(([groupKey, nuts]) => {
+                      const groupMeta =
+                        TIER_GROUP_LABEL[groupKey as NutrientTier | "custom"] ??
+                        TIER_GROUP_LABEL.basic;
+                      return (
+                        <div key={groupKey} className="border-t border-[var(--border-subtle)] pt-2">
+                          <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+                            {language === "id" ? groupMeta.id : groupMeta.en}
+                          </p>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {nuts.map((nut) => {
+                              const checked = isColVisible(nut.id);
+                              const shortLabel = getNutrientDisplayName(nut, language, simpleMode);
+                              const fullName = getNutrientFullName(nut, language);
+                              return (
+                                <label
+                                  key={nut.id}
+                                  title={fullName}
+                                  className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 text-[11px] font-medium text-[var(--text-primary)] select-none md:min-h-0"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() => toggleColumn(nut.id)}
+                                    className="h-3.5 w-3.5 cursor-pointer rounded border-[var(--border-subtle)] accent-[var(--color-primary)]"
+                                  />
+                                  <span className="truncate">{shortLabel}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+
+              if (isMobileViewport) {
+                return (
+                  <div
+                    className="fixed inset-0 z-[70] flex items-end justify-center bg-black/55"
+                    onClick={() => closePopover({ restoreFocus: true })}
+                  >
+                    {dialogBody}
+                  </div>
+                );
+              }
+
+              return dialogBody;
+            })()}
         </div>
       </div>
 
@@ -818,7 +998,7 @@ export const IngredientDesktopTable = memo(function IngredientDesktopTable({
           <button
             type="button"
             onClick={() => setPasteNotice(null)}
-            className="cursor-pointer rounded px-1.5 py-0.5 font-semibold underline hover:opacity-80"
+            className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded px-2 font-semibold underline hover:opacity-80 md:min-h-0 md:min-w-0 md:px-1.5 md:py-0.5"
           >
             {pickLang(language, "Tutup", "Close")}
           </button>
@@ -833,9 +1013,19 @@ export const IngredientDesktopTable = memo(function IngredientDesktopTable({
         )}
       >
         <table className="w-max min-w-full border-collapse text-left text-xs">
-          <thead className="sticky top-0 z-20 bg-[var(--glass-sticky-bg,var(--bg-sunken))] text-[11px] font-bold tracking-wide text-[var(--text-secondary)] backdrop-blur-md">
+          <thead
+            className={cn(
+              "sticky top-0 z-20 bg-[var(--glass-sticky-bg,var(--bg-sunken))] text-[11px] font-bold tracking-wide text-[var(--text-secondary)]",
+              !isAntiSlop && "backdrop-blur-md",
+            )}
+          >
             <tr>
-              <th className="w-10 border-r border-b border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--glass-sticky-bg,var(--bg-sunken))] px-1.5 py-2 text-center backdrop-blur-md md:sticky md:left-0 md:z-30">
+              <th
+                className={cn(
+                  "w-11 border-r border-b border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--glass-sticky-bg,var(--bg-sunken))] px-1.5 py-2 text-center md:sticky md:left-0 md:z-30 md:w-10",
+                  !isAntiSlop && "backdrop-blur-md",
+                )}
+              >
                 {pickLang(language, "Aktif", "Active")}
               </th>
               <th
@@ -844,12 +1034,31 @@ export const IngredientDesktopTable = memo(function IngredientDesktopTable({
                   minWidth: `${nameColWidth}px`,
                   maxWidth: `${nameColWidth}px`,
                 }}
-                className="border-r border-b border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--glass-sticky-bg,var(--bg-sunken))] py-2 pr-4 pl-2.5 shadow-[4px_0_12px_-4px_rgba(0,0,0,0.1)] backdrop-blur-md md:sticky md:left-10 md:z-30"
+                className={cn(
+                  "relative border-r border-b border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--glass-sticky-bg,var(--bg-sunken))] py-2 pr-5 pl-2.5 md:sticky md:left-10 md:z-30",
+                  !isAntiSlop && "shadow-[4px_0_12px_-4px_rgba(0,0,0,0.1)] backdrop-blur-md",
+                )}
               >
                 <div className="flex items-center justify-between gap-1">
                   <span className="truncate">{pickLang(language, "Nama Bahan", "Ingredient")}</span>
+                  <button
+                    type="button"
+                    onClick={() => setNameColWidth((w) => (w < 260 ? 300 : DEFAULT_NAME_COL_WIDTH))}
+                    title={pickLang(
+                      language,
+                      "Perlebar atau ringkas kolom Nama Bahan",
+                      "Expand or compact Ingredient Name column",
+                    )}
+                    aria-label={pickLang(
+                      language,
+                      "Perlebar tampilan nama bahan",
+                      "Expand ingredient name width",
+                    )}
+                    className="inline-flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-elevated)] text-[10px] font-bold text-[var(--text-secondary)] hover:border-[var(--color-primary)] hover:text-[var(--text-primary)]"
+                  >
+                    ↔
+                  </button>
                 </div>
-                {/* Handle geser kiri/kanan lebar kolom Nama Bahan */}
                 <div
                   role="separator"
                   aria-orientation="vertical"
@@ -862,6 +1071,7 @@ export const IngredientDesktopTable = memo(function IngredientDesktopTable({
                   aria-valuemax={MAX_NAME_COL_WIDTH}
                   aria-valuenow={nameColWidth}
                   tabIndex={0}
+                  style={{ touchAction: "none" }}
                   title={pickLang(
                     language,
                     "Geser kiri/kanan untuk atur lebar (klik 2× untuk perkecil/perbesar)",
@@ -869,11 +1079,11 @@ export const IngredientDesktopTable = memo(function IngredientDesktopTable({
                   )}
                   onPointerDown={handleResizePointerDown}
                   onDoubleClick={() =>
-                    setNameColWidth((w) => (w <= 130 ? DEFAULT_NAME_COL_WIDTH : 112))
+                    setNameColWidth((w) => (w < 260 ? 300 : DEFAULT_NAME_COL_WIDTH))
                   }
                   onKeyDown={handleResizeKeyDown}
                   className={cn(
-                    "group/resize absolute top-0 right-0 bottom-0 flex w-3 cursor-col-resize items-center justify-center transition-colors select-none hover:bg-[var(--primary-soft)] focus-visible:bg-[var(--primary-soft)] focus-visible:outline-none",
+                    "group/resize absolute top-0 right-0 bottom-0 flex w-4 cursor-col-resize items-center justify-center transition-colors select-none hover:bg-[var(--primary-soft)] focus-visible:bg-[var(--primary-soft)] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-[var(--focus-ring)]",
                     isResizing && "bg-[var(--primary-soft)]",
                   )}
                 >
@@ -953,6 +1163,7 @@ export const IngredientDesktopTable = memo(function IngredientDesktopTable({
                 visibleNutrients={visibleNutrients}
                 decimalPlaces={decimalPlaces}
                 simpleMode={simpleMode}
+                isAntiSlop={isAntiSlop}
                 language={language}
                 onUpdateIngredient={onUpdateIngredient}
                 onResetPriceOverride={onResetPriceOverride}

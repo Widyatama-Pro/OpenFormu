@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { ArrowRight, FlaskConical, Gauge, RotateCcw, Sliders } from "lucide-react";
 import { pickLang } from "../../i18n";
+import { useOptionalThemeContext } from "../../theme";
 import type {
   AppLanguage,
   EnzymeConfig,
@@ -11,10 +12,10 @@ import type {
 import { cn } from "../../utils/cn";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
-import { Input } from "../ui/Input";
 import { SheetDialog } from "../ui/SheetDialog";
 import { Switch } from "../ui/Switch";
 import { ThemedSelect } from "../ui/ThemedSelect";
+import { NumericCellInput } from "./NumericCellInput";
 
 export type PrecisionFocusSection = "fractional" | "stochastic" | "enzyme";
 
@@ -85,6 +86,7 @@ export function PrecisionEngineDialog({
   onJumpToRumenEvaluator,
   onUpdatePrecision,
 }: PrecisionEngineDialogProps) {
+  const isAntiSlop = useOptionalThemeContext()?.uiMode === "anti-slop";
   const activeEnzymes = config.enzymes ?? [];
   const capPsi = config.enzymeSubAdditiveCap ?? 1;
   const fractionalRef = useRef<HTMLDivElement | null>(null);
@@ -185,9 +187,12 @@ export function PrecisionEngineDialog({
           onPointerDown={() => dismissSpotlightIfMatched("fractional")}
           onKeyDown={() => dismissSpotlightIfMatched("fractional")}
           className={cn(
-            "modal-section-card rounded-2xl p-3.5 transition-shadow duration-200",
+            "modal-section-card p-3.5 transition-shadow duration-200",
+            isAntiSlop ? "rounded-xl" : "rounded-2xl",
             focusSection === "fractional" &&
-              "feature-spotlight-glow ring-2 ring-[var(--color-accent)]",
+              (isAntiSlop
+                ? "ring-2 ring-[var(--color-primary)]"
+                : "feature-spotlight-glow ring-2 ring-[var(--color-accent)]"),
           )}
         >
           <div className="mb-2 flex items-center justify-between gap-2">
@@ -264,9 +269,12 @@ export function PrecisionEngineDialog({
           onPointerDown={() => dismissSpotlightIfMatched("stochastic")}
           onKeyDown={() => dismissSpotlightIfMatched("stochastic")}
           className={cn(
-            "modal-section-card rounded-2xl p-3.5 transition-shadow duration-200",
+            "modal-section-card p-3.5 transition-shadow duration-200",
+            isAntiSlop ? "rounded-xl" : "rounded-2xl",
             focusSection === "stochastic" &&
-              "feature-spotlight-glow ring-2 ring-[var(--color-accent)]",
+              (isAntiSlop
+                ? "ring-2 ring-[var(--color-primary)]"
+                : "feature-spotlight-glow ring-2 ring-[var(--color-accent)]"),
           )}
         >
           <div className="mb-2 flex items-center justify-between gap-2">
@@ -305,16 +313,19 @@ export function PrecisionEngineDialog({
               >
                 {pickLang(language, "Maks Iterasi SLP", "Max SLP Iterations")}
               </label>
-              <Input
+              <NumericCellInput
                 id="stochastic-max-iter"
-                type="number"
+                ariaLabel={pickLang(language, "Maks Iterasi SLP", "Max SLP Iterations")}
                 min={1}
                 max={40}
+                fractionDigits={0}
+                fallbackOnEmpty={config.stochasticMaxIter ?? 12}
+                commitOnChange
                 value={config.stochasticMaxIter ?? 12}
                 disabled={config.enableStochasticSlp !== true}
-                onChange={(e) =>
+                onCommit={(val) =>
                   onUpdatePrecision({
-                    stochasticMaxIter: Math.max(1, Math.min(40, Number(e.target.value) || 12)),
+                    stochasticMaxIter: Math.max(1, Math.min(40, Math.round(val ?? 12))),
                   })
                 }
               />
@@ -326,17 +337,19 @@ export function PrecisionEngineDialog({
               >
                 {pickLang(language, "Redaman α (0,1–1,0)", "Damping α (0.1–1.0)")}
               </label>
-              <Input
+              <NumericCellInput
                 id="stochastic-damping"
-                type="number"
-                step="0.1"
+                ariaLabel={pickLang(language, "Redaman α (0,1–1,0)", "Damping α (0.1–1.0)")}
                 min={0.1}
                 max={1}
+                fractionDigits={2}
+                fallbackOnEmpty={config.stochasticDamping ?? 0.5}
+                commitOnChange
                 value={config.stochasticDamping ?? 0.5}
                 disabled={config.enableStochasticSlp !== true}
-                onChange={(e) =>
+                onCommit={(val) =>
                   onUpdatePrecision({
-                    stochasticDamping: Math.min(1, Math.max(0.1, Number(e.target.value) || 0.5)),
+                    stochasticDamping: Math.min(1, Math.max(0.1, val ?? 0.5)),
                   })
                 }
               />
@@ -360,8 +373,12 @@ export function PrecisionEngineDialog({
           onPointerDown={() => dismissSpotlightIfMatched("enzyme")}
           onKeyDown={() => dismissSpotlightIfMatched("enzyme")}
           className={cn(
-            "modal-section-card rounded-2xl p-3.5 transition-shadow duration-200",
-            focusSection === "enzyme" && "feature-spotlight-glow ring-2 ring-[var(--color-accent)]",
+            "modal-section-card p-3.5 transition-shadow duration-200",
+            isAntiSlop ? "rounded-xl" : "rounded-2xl",
+            focusSection === "enzyme" &&
+              (isAntiSlop
+                ? "ring-2 ring-[var(--color-primary)]"
+                : "feature-spotlight-glow ring-2 ring-[var(--color-accent)]"),
           )}
         >
           <div className="mb-2 flex items-center justify-between gap-2">
@@ -393,9 +410,14 @@ export function PrecisionEngineDialog({
               return (
                 <div
                   key={preset.id}
-                  className="neu-well flex flex-wrap items-center justify-between gap-2 rounded-xl p-2.5"
+                  className={cn(
+                    "flex flex-wrap items-center justify-between gap-2 rounded-xl p-2.5",
+                    isAntiSlop
+                      ? "border border-[var(--border-subtle)] bg-[var(--bg-sunken)]"
+                      : "neu-well",
+                  )}
                 >
-                  <label className="flex cursor-pointer items-center gap-2 font-semibold text-[var(--text-primary)]">
+                  <label className="flex min-h-11 cursor-pointer items-center gap-2 font-semibold text-[var(--text-primary)] md:min-h-0">
                     <input
                       type="checkbox"
                       checked={Boolean(active)}
@@ -428,7 +450,7 @@ export function PrecisionEngineDialog({
                             { value: "0.7", label: "70% (Pellet 90°C)" },
                             { value: "0.5", label: "50% (Extruder)" },
                           ]}
-                          className="h-7 min-h-7 py-0 text-[11px]"
+                          className="min-h-11 py-0 text-[11px] md:h-7 md:min-h-7"
                         />
                       </div>
                     </div>
@@ -464,7 +486,7 @@ export function PrecisionEngineDialog({
                   { value: "0.7", label: "0.70 (70% Cap)" },
                   { value: "0.5", label: "0.50 (50% Cap)" },
                 ]}
-                className="h-7 min-h-7 py-0 text-[11px]"
+                className="min-h-11 py-0 text-[11px] md:h-7 md:min-h-7"
               />
             </div>
           </div>
@@ -479,7 +501,7 @@ export function PrecisionEngineDialog({
                 }}
               >
                 <span>{pickLang(language, "Lihat Evaluator Rumen", "View Rumen Evaluator")}</span>
-                <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                {!isAntiSlop && <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />}
               </Button>
             </div>
           )}

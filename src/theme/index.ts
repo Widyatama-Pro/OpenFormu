@@ -1,10 +1,12 @@
 export { ThemeProvider, type ThemeProviderProps } from "./ThemeProvider";
 export {
   THEME_STORAGE_KEYS,
+  isUiMode,
   useOptionalThemeContext,
   usePortableTheme,
   useTheme,
   type PortableThemeState,
+  type ThemeContextValue,
   type UsePortableThemeOptions,
 } from "./use-theme";
 export {

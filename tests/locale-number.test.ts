@@ -51,8 +51,15 @@ describe("locale-number utilities", () => {
     expect(resolveDisplayDigits("%", "p", 0, 0.45)).toBe(2);
     expect(resolveDisplayDigits("%", "lys", 1, 1.15)).toBe(2);
     expect(resolveDisplayDigits("%", "ca", 0, 0)).toBe(0);
-    // When Layer Ca >= 2%, follows global macro preference
+    //When Layer Ca >= 2%, follows global macro preference
     expect(resolveDisplayDigits("%", "ca", 0, 3.6)).toBe(0);
+
+    // Min/Max bounds & sub-1% values preserve up to 3 significant decimal places (0.00x)
+    expect(resolveDisplayDigits("%", "min", 0, 0.5)).toBe(1);
+    expect(resolveDisplayDigits("%", "max", 0, 0.05)).toBe(2);
+    expect(resolveDisplayDigits("%", "min", 0, 0.005)).toBe(3);
+    expect(resolveDisplayDigits("%", "inclusion", 0, 0.5)).toBe(2);
+    expect(resolveDisplayDigits("%", "inclusion", 0, 0.004)).toBe(3);
 
     // Non-% units (kcal/kg, mg/kg, mEq/kg, IU/kg) stay integer (0 decimals)
     expect(resolveDisplayDigits("kcal/kg", "me_poultry", 2, 3050)).toBe(0);

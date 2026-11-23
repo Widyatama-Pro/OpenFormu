@@ -23,8 +23,10 @@ export {
   escapeCsvCell,
   generateFormulationCsv,
   generateFormulationXlsx,
+  generateIngredientDatabaseXlsx,
   neutralizeSpreadsheetFormula,
   type FormulationExportInput,
+  type IngredientDatabaseXlsxInput,
 } from "./exportCsvXlsx";
 export {
   generateFormulationPdf,

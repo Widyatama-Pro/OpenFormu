@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { pickLang } from "../../i18n";
 import type { AppLanguage } from "../../types";
 import { Button } from "../ui/Button";
@@ -20,8 +20,17 @@ export function SaveRecipeDialog({
   onClose,
   onSave,
 }: SaveRecipeDialogProps) {
+  const fieldId = useId();
   const [name, setName] = useState(defaultName);
   const [notes, setNotes] = useState("");
+  const [prevSync, setPrevSync] = useState({ open, defaultName });
+
+  if (prevSync.open !== open || prevSync.defaultName !== defaultName) {
+    setPrevSync({ open, defaultName });
+    if (open) {
+      setName(defaultName);
+    }
+  }
 
   const handleConfirm = () => {
     const trimmed = name.trim() || defaultName;
@@ -53,16 +62,23 @@ export function SaveRecipeDialog({
     >
       <div className="space-y-3.5 text-xs">
         <div>
-          <label className="mb-1 block font-medium text-[var(--text-primary)]">
+          <label
+            htmlFor={`${fieldId}-name`}
+            className="mb-1 block font-medium text-[var(--text-primary)]"
+          >
             {pickLang(language, "Nama Resep", "Recipe Name")}
           </label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} />
+          <Input id={`${fieldId}-name`} value={name} onChange={(e) => setName(e.target.value)} />
         </div>
         <div>
-          <label className="mb-1 block font-medium text-[var(--text-primary)]">
+          <label
+            htmlFor={`${fieldId}-notes`}
+            className="mb-1 block font-medium text-[var(--text-primary)]"
+          >
             {pickLang(language, "Catatan Lapangan (Opsional)", "Field Notes (Optional)")}
           </label>
           <Input
+            id={`${fieldId}-notes`}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder={pickLang(

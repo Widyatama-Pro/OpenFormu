@@ -1,6 +1,6 @@
 import { HARTADI_FEEDS } from "./hartadi-feeds";
 import { KEARL_REQUIREMENTS, NRC_1988_DAIRY_REQUIREMENTS } from "./kearl-requirements";
-import { SNI_REQUIREMENTS } from "./sni-requirements";
+import { NRC_1994_POULTRY_REQUIREMENTS, SNI_REQUIREMENTS } from "./sni-requirements";
 import { resolveEffectiveConstraintBounds } from "../solver/modelHelpers";
 import type {
   Basis,
@@ -150,9 +150,14 @@ export const MOCK_INGREDIENTS: readonly Ingredient[] = [
       val: 0.4,
       sid_lys: 0.23,
       avp: 0.09,
+      na: 200,
+      k: 3000,
+      cl: 400,
+      s: 800,
       ndf: 9.5,
       adf: 3.1,
       starch: 64.0,
+      betn: 73.2,
       tannin: 0,
       liquid_fat: 0,
     },
@@ -186,9 +191,14 @@ export const MOCK_INGREDIENTS: readonly Ingredient[] = [
       val: 2.08,
       sid_lys: 2.42,
       avp: 0.22,
+      na: 340,
+      k: 19600,
+      cl: 360,
+      s: 4300,
       ndf: 13.8,
       adf: 8.6,
       starch: 5.5,
+      betn: 31.2,
       tannin: 0,
       liquid_fat: 0,
     },
@@ -219,12 +229,17 @@ export const MOCK_INGREDIENTS: readonly Ingredient[] = [
       metcys: 0.5,
       thr: 0.46,
       trp: null, // Contoh data lab lokal belum tersedia (N/A)
-      val: null,
+      val: 0.75,
       sid_lys: 0.45,
       avp: 0.24,
+      na: 700,
+      k: 17300,
+      cl: 700,
+      s: 1800,
       ndf: 26.5,
       adf: 14.2,
       starch: 22.0,
+      betn: 43.2,
       tannin: 0.1,
       liquid_fat: 0,
     },
@@ -258,9 +273,14 @@ export const MOCK_INGREDIENTS: readonly Ingredient[] = [
       val: 2.65,
       sid_lys: 3.65,
       avp: 2.7,
+      na: 8800,
+      k: 7200,
+      cl: 9800,
+      s: 5400,
       ndf: 0,
       adf: 0,
       starch: 0,
+      betn: 2.5,
       tannin: 0,
       liquid_fat: 0,
     },
@@ -289,12 +309,17 @@ export const MOCK_INGREDIENTS: readonly Ingredient[] = [
       metcys: 0.52,
       thr: 0.49,
       trp: 0.16,
-      val: null,
+      val: 0.78,
       sid_lys: 0.36,
       avp: 0.19,
+      na: 220,
+      k: 6400,
+      cl: 1600,
+      s: 2100,
       ndf: 65.0,
       adf: 41.0,
       starch: 2.0,
+      betn: 46.8,
       tannin: 0.3,
       liquid_fat: 0,
     },
@@ -512,7 +537,13 @@ export const MOCK_INGREDIENTS: readonly Ingredient[] = [
   ...HARTADI_FEEDS,
 ];
 
-export { HARTADI_FEEDS, KEARL_REQUIREMENTS, NRC_1988_DAIRY_REQUIREMENTS, SNI_REQUIREMENTS };
+export {
+  HARTADI_FEEDS,
+  KEARL_REQUIREMENTS,
+  NRC_1988_DAIRY_REQUIREMENTS,
+  NRC_1994_POULTRY_REQUIREMENTS,
+  SNI_REQUIREMENTS,
+};
 
 export const MOCK_REQUIREMENTS: readonly Requirement[] = [
   {
@@ -613,6 +644,7 @@ export const MOCK_REQUIREMENTS: readonly Requirement[] = [
     source: "SNI 3148-2:2017 / NRC Beef Cattle (2016)",
   },
   ...SNI_REQUIREMENTS,
+  ...NRC_1994_POULTRY_REQUIREMENTS,
   ...KEARL_REQUIREMENTS,
   ...NRC_1988_DAIRY_REQUIREMENTS,
 ];
@@ -634,6 +666,7 @@ export const DEFAULT_CONFIG: FormulationConfig = {
 export const DEFAULT_PREFERENCES: UserPreferences = {
   language: "id",
   theme: "light",
+  uiMode: "enhanced",
   uiEnhancer: true,
   renderingEngine: "ultra",
   motionEngine: "gpu_flip",

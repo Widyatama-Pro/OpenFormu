@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { resolveFeedClass } from "../../data/feed-classes";
 import { MOCK_NUTRIENTS } from "../../data/mock-state";
 import { getNutrientDisplayName, getNutrientFullName, pickLang } from "../../i18n";
+import { useOptionalThemeContext } from "../../theme";
 import type { AppLanguage, Ingredient, Nutrient, TableViewTier } from "../../types";
 import { cn } from "../../utils/cn";
 import { isDerivedNutrient, resolveNutrientValue } from "../../utils/equations";
@@ -59,8 +60,10 @@ export const AllIngredientsCatalogTable = memo(function AllIngredientsCatalogTab
   onOpenDetail,
   onResetFilter,
 }: AllIngredientsCatalogTableProps) {
+  const isAntiSlop = useOptionalThemeContext()?.uiMode === "anti-slop";
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
+  const [expandNameCol, setExpandNameCol] = useState(false);
 
   useEffect(() => {
     setScrollTop(0);
@@ -127,13 +130,51 @@ export const AllIngredientsCatalogTable = memo(function AllIngredientsCatalogTab
       className="custom-scrollbar max-h-[240px] overflow-auto rounded-xl border border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--glass-table-bg,var(--bg-surface))]"
     >
       <table className="w-max min-w-full border-collapse text-left text-xs">
-        <thead className="sticky top-0 z-10 bg-[var(--glass-sticky-bg,var(--bg-sunken))] text-[11px] font-bold text-[var(--text-secondary)] backdrop-blur-md">
+        <thead
+          className={cn(
+            "sticky top-0 z-10 bg-[var(--glass-sticky-bg,var(--bg-sunken))] text-[11px] font-bold text-[var(--text-secondary)]",
+            !isAntiSlop && "backdrop-blur-md",
+          )}
+        >
           <tr>
-            <th className="w-11 border-r border-b border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--glass-sticky-bg,var(--bg-sunken))] px-1.5 py-2 text-center backdrop-blur-md md:sticky md:left-0 md:z-20 md:w-14 md:px-2">
+            <th
+              className={cn(
+                "w-11 border-r border-b border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--glass-sticky-bg,var(--bg-sunken))] px-1.5 py-2 text-center md:sticky md:left-0 md:z-20 md:w-14 md:px-2",
+                !isAntiSlop && "backdrop-blur-md",
+              )}
+            >
               {pickLang(language, "Pakai", "Use")}
             </th>
-            <th className="w-40 min-w-40 max-w-48 border-r border-b border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--glass-sticky-bg,var(--bg-sunken))] px-2 py-2 shadow-[4px_0_12px_-4px_rgba(0,0,0,0.08)] backdrop-blur-md md:sticky md:left-14 md:z-20 md:w-56 md:min-w-56 md:max-w-56 md:px-2.5">
-              {pickLang(language, "Nama Bahan", "Ingredient Name")}
+            <th
+              className={cn(
+                "border-r border-b border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--glass-sticky-bg,var(--bg-sunken))] px-2 py-2 md:sticky md:left-14 md:z-20 md:px-2.5",
+                expandNameCol
+                  ? "w-72 min-w-72 max-w-96 md:w-88 md:min-w-88 md:max-w-96"
+                  : "w-44 min-w-44 max-w-56 md:w-56 md:min-w-56 md:max-w-56",
+                !isAntiSlop && "shadow-[4px_0_12px_-4px_rgba(0,0,0,0.08)] backdrop-blur-md",
+              )}
+            >
+              <div className="flex items-center justify-between gap-1">
+                <span>{pickLang(language, "Nama Bahan", "Ingredient Name")}</span>
+                <button
+                  type="button"
+                  onClick={() => setExpandNameCol((prev) => !prev)}
+                  aria-pressed={expandNameCol}
+                  title={pickLang(
+                    language,
+                    "Tampilkan nama bahan secara penuh atau ringkas",
+                    "Toggle full or compact ingredient name column",
+                  )}
+                  aria-label={pickLang(
+                    language,
+                    "Tampilkan nama bahan secara penuh",
+                    "Show full ingredient name",
+                  )}
+                  className="inline-flex h-5 shrink-0 cursor-pointer items-center justify-center rounded border border-[var(--border-subtle)] bg-[var(--bg-surface-elevated)] px-1.5 text-[10px] font-bold text-[var(--text-secondary)] hover:border-[var(--color-primary)] hover:text-[var(--text-primary)]"
+                >
+                  {expandNameCol ? "→←" : "↔"}
+                </button>
+              </div>
             </th>
             {showStandardCols && (
               <th className="w-16 min-w-16 border-b border-[var(--border-subtle)] px-2 py-2 text-center">
@@ -198,22 +239,41 @@ export const AllIngredientsCatalogTable = memo(function AllIngredientsCatalogTab
                   isActive && "bg-[var(--glass-row-active,var(--status-success-soft))]",
                 )}
               >
-                <td className="w-11 border-r border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--glass-sticky-bg,var(--bg-surface))] px-1.5 py-1 text-center backdrop-blur-md transition-colors group-hover:bg-[var(--glass-row-hover,var(--bg-surface-elevated))] md:sticky md:left-0 md:z-10 md:w-14 md:px-2">
-                  <input
-                    type="checkbox"
-                    checked={isActive}
-                    aria-label={`${pickLang(language, "Gunakan", "Use")} ${displayName}`}
-                    onChange={(e) => onToggleActive(ing.id, e.target.checked)}
-                    className="h-4 w-4 cursor-pointer rounded border-[var(--border-subtle)] accent-[var(--color-primary)]"
-                  />
+                <td
+                  className={cn(
+                    "w-11 border-r border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--glass-sticky-bg,var(--bg-surface))] px-1 py-1 text-center transition-colors group-hover:bg-[var(--glass-row-hover,var(--bg-surface-elevated))] md:sticky md:left-0 md:z-10 md:w-14 md:px-2",
+                    !isAntiSlop && "backdrop-blur-md",
+                  )}
+                >
+                  <label className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center md:min-h-0 md:min-w-0">
+                    <input
+                      type="checkbox"
+                      checked={isActive}
+                      aria-label={`${pickLang(language, "Gunakan", "Use")} ${displayName}`}
+                      onChange={(e) => onToggleActive(ing.id, e.target.checked)}
+                      className="h-4 w-4 cursor-pointer rounded border-[var(--border-subtle)] accent-[var(--color-primary)]"
+                    />
+                  </label>
                 </td>
                 <td
                   title={displayName}
-                  className="w-40 min-w-40 max-w-48 border-r border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--glass-sticky-bg,var(--bg-surface))] px-2 py-1 shadow-[4px_0_12px_-4px_rgba(0,0,0,0.08)] backdrop-blur-md transition-colors group-hover:bg-[var(--glass-row-hover,var(--bg-surface-elevated))] md:sticky md:left-14 md:z-10 md:w-56 md:min-w-56 md:max-w-56 md:px-2.5"
+                  onClick={() => setExpandNameCol((prev) => !prev)}
+                  className={cn(
+                    "cursor-pointer border-r border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--glass-sticky-bg,var(--bg-surface))] px-2 py-1 transition-colors group-hover:bg-[var(--glass-row-hover,var(--bg-surface-elevated))] md:sticky md:left-14 md:z-10 md:px-2.5",
+                    expandNameCol
+                      ? "w-72 min-w-72 max-w-96 md:w-88 md:min-w-88 md:max-w-96"
+                      : "w-44 min-w-44 max-w-56 md:w-56 md:min-w-56 md:max-w-56",
+                    !isAntiSlop && "shadow-[4px_0_12px_-4px_rgba(0,0,0,0.08)] backdrop-blur-md",
+                  )}
                 >
                   <div className="flex items-center gap-1.5">
                     <FeedClassIcon code={feedClass} language={language} />
-                    <span className="truncate font-semibold text-[var(--text-primary)]">
+                    <span
+                      className={cn(
+                        "font-semibold text-[var(--text-primary)]",
+                        expandNameCol ? "leading-snug break-words whitespace-normal" : "truncate",
+                      )}
+                    >
                       {displayName}
                     </span>
                   </div>
@@ -222,7 +282,8 @@ export const AllIngredientsCatalogTable = memo(function AllIngredientsCatalogTab
                   <td className="w-16 min-w-16 px-2 py-1 text-center">
                     <span
                       className={cn(
-                        "inline-block rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                        "inline-block border px-2 py-0.5 text-[10px] font-semibold",
+                        isAntiSlop ? "rounded-md" : "rounded-full",
                         ing.basis === "as_fed"
                           ? "border-[var(--status-info-border)] bg-[var(--status-info-soft)] text-[var(--status-info)]"
                           : "border-[var(--status-success-border)] bg-[var(--status-success-soft)] text-[var(--status-success)]",
@@ -271,7 +332,12 @@ export const AllIngredientsCatalogTable = memo(function AllIngredientsCatalogTab
                     type="button"
                     onClick={() => onOpenDetail(ing)}
                     aria-label={`Detail ${displayName}`}
-                    className="neu-pill-btn cursor-pointer rounded-md px-2 py-0.5 text-[10px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                    className={cn(
+                      "inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-md px-2.5 text-[10px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] md:min-h-0 md:min-w-0 md:px-2 md:py-0.5",
+                      isAntiSlop
+                        ? "border border-[var(--border-strong)] bg-[var(--bg-surface-elevated)] hover:border-[var(--color-primary)]"
+                        : "neu-pill-btn",
+                    )}
                   >
                     Detail
                   </button>

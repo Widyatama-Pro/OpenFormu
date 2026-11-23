@@ -8,6 +8,7 @@ import {
   pickLang,
 } from "../../i18n";
 import { isUpperBoundOnlyNutrient, resolveSingleTargetValue } from "../../solver";
+import { useOptionalThemeContext } from "../../theme";
 import type {
   AppLanguage,
   FormulationConfig,
@@ -29,7 +30,7 @@ import { Badge } from "../ui/Badge";
 import { Card } from "../ui/Card";
 import { SegmentedTabs } from "../ui/SegmentedTabs";
 import { Switch } from "../ui/Switch";
-import { BatchMixerCalculator } from "./BatchMixerCalculator";
+import { BatchMixerCalculator, type BatchPrecisionMode } from "./BatchMixerCalculator";
 import { ConflictDiagnosticsBanner } from "./ConflictDiagnosticsBanner";
 import { FormulationCharts } from "./FormulationCharts";
 import { ShadowPriceTab } from "./ShadowPriceTab";
@@ -80,7 +81,10 @@ export const ResultsPanel = memo(function ResultsPanel({
   onSetManualLock,
   onClearManualLocks,
 }: ResultsPanelProps) {
+  const isAntiSlop = useOptionalThemeContext()?.uiMode === "anti-slop";
+  const emptyDash = isAntiSlop ? "-" : "—";
   const [internalSubTab, setInternalSubTab] = useState<ResultSubTab>("batch");
+  const [precisionMode, setPrecisionMode] = useState<BatchPrecisionMode>("dual");
   const subTab = activeSubTab ?? internalSubTab;
   const setSubTab = (next: ResultSubTab) => {
     setInternalSubTab(next);
@@ -171,7 +175,10 @@ export const ResultsPanel = memo(function ResultsPanel({
     <Card
       interactive={false}
       highlight={result.status === "infeasible" ? "coral" : "none"}
-      className="acrylic-panel selectable-panel flex flex-col lg:h-full lg:overflow-hidden"
+      className={cn(
+        "selectable-panel flex flex-col lg:h-full lg:overflow-hidden",
+        !isAntiSlop && "acrylic-panel",
+      )}
     >
       {!hideKpiStrip && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-subtle)] px-4 py-2.5">
@@ -182,7 +189,7 @@ export const ResultsPanel = memo(function ResultsPanel({
                 {result.basis === "as_fed" ? "As-Fed" : pickLang(language, "BK", "DM")})
               </span>
               <span className="text-base font-bold tracking-tight tabular-nums text-[var(--status-warning)]">
-                {result.costPerKg !== null ? formatCurrencyIdr(result.costPerKg) : "—"}
+                {result.costPerKg !== null ? formatCurrencyIdr(result.costPerKg) : emptyDash}
               </span>
             </div>
 
@@ -193,7 +200,7 @@ export const ResultsPanel = memo(function ResultsPanel({
               <span className="text-base font-bold tracking-tight tabular-nums text-[var(--status-success)]">
                 {result.batchTotalCost !== null && result.batchTotalCost !== undefined
                   ? formatCurrencyIdr(result.batchTotalCost)
-                  : "—"}
+                  : emptyDash}
               </span>
             </div>
           </div>
@@ -286,6 +293,10 @@ export const ResultsPanel = memo(function ResultsPanel({
                   composition={result.composition}
                   ingredients={ingredients}
                   activeBasis={result.basis}
+                  requirement={requirement}
+                  costPerKg={result.costPerKg}
+                  precisionMode={precisionMode}
+                  onChangePrecisionMode={setPrecisionMode}
                   decimalPlaces={decimalPlaces}
                   language={language}
                 />
@@ -329,7 +340,12 @@ export const ResultsPanel = memo(function ResultsPanel({
 
                     <div className="custom-scrollbar overflow-x-auto">
                       <table className="w-full border-collapse text-xs">
-                        <thead className="bg-[var(--bg-sunken)]/65 text-[11px] font-bold tracking-wide text-[var(--text-secondary)]">
+                        <thead
+                          className={cn(
+                            "text-[11px] font-bold tracking-wide text-[var(--text-secondary)]",
+                            isAntiSlop ? "bg-[var(--bg-sunken)]" : "bg-[var(--bg-sunken)]/65",
+                          )}
+                        >
                           <tr>
                             <th className="px-3 py-1.5 text-left">
                               {pickLang(language, "Nutrien", "Nutrient")}
@@ -405,7 +421,7 @@ export const ResultsPanel = memo(function ResultsPanel({
 
                             const deltaText =
                               deltaVal === null
-                                ? "—"
+                                ? emptyDash
                                 : Math.abs(deltaVal) < 1e-4
                                   ? pickLang(language, "Tepat Target", "Exact Fit")
                                   : `${deltaVal > 0 ? "+" : ""}${formatNumberLocale(deltaVal, digits)} ${nut.unit}`;
@@ -418,7 +434,10 @@ export const ResultsPanel = memo(function ResultsPanel({
                                 key={nut.id}
                                 className={cn(
                                   "transition-colors hover:bg-[var(--bg-surface)]",
-                                  isAlert && "bg-[var(--status-danger-soft)]/50",
+                                  isAlert &&
+                                    (isAntiSlop
+                                      ? "bg-[var(--status-danger-soft)]"
+                                      : "bg-[var(--status-danger-soft)]/50"),
                                 )}
                               >
                                 <td
@@ -434,9 +453,24 @@ export const ResultsPanel = memo(function ResultsPanel({
                                   {targetText}
                                 </td>
                                 <td className="px-2.5 py-1.5 text-right font-bold tabular-nums text-[var(--text-primary)]">
-                                  {actualVal !== undefined
-                                    ? `${formatNumberLocale(actualVal, digits)} ${nut.unit}`
-                                    : "—"}
+                                  {actualVal !== undefined ? (
+                                    precisionMode === "rounded" || nut.unit !== "%" ? (
+                                      `${formatNumberLocale(actualVal, nut.unit === "%" && precisionMode === "exact_3dec" ? 3 : digits)} ${nut.unit}`
+                                    ) : precisionMode === "exact_3dec" ? (
+                                      `${formatNumberLocale(actualVal, 3)} ${nut.unit}`
+                                    ) : (
+                                      <>
+                                        <span>
+                                          {formatNumberLocale(actualVal, 3)} {nut.unit}
+                                        </span>
+                                        <span className="ml-1 text-[10px] font-normal text-[var(--text-muted)]">
+                                          ({formatNumberLocale(actualVal, digits)})
+                                        </span>
+                                      </>
+                                    )
+                                  ) : (
+                                    emptyDash
+                                  )}
                                 </td>
                                 <td
                                   className={cn(
@@ -471,7 +505,10 @@ export const ResultsPanel = memo(function ResultsPanel({
                     onPointerDown={onClearSpotlight}
                     onClick={onClearSpotlight}
                     className={cn(
-                      "glass-card rounded-xl p-3 text-xs transition-shadow",
+                      "rounded-xl p-3 text-xs transition-shadow",
+                      isAntiSlop
+                        ? "border border-[var(--border-subtle)] bg-[var(--bg-surface-elevated)]"
+                        : "glass-card",
                       spotlightTarget === "rumen" && "feature-spotlight-glow",
                     )}
                   >

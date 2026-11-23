@@ -43,10 +43,21 @@
             (localStorage.getItem("openformu-theme-amoled") ||
               localStorage.getItem("openformul-theme-amoled") ||
               localStorage.getItem("app-theme-amoled")) === "true";
+          var validUiModes = ["biasa", "enhanced", "anti-slop"];
+          var uiMode =
+            localStorage.getItem("openformu-ui-mode") || localStorage.getItem("openformul-ui-mode");
+          if (validUiModes.indexOf(uiMode) === -1) {
+            var legacyEnhancer =
+              localStorage.getItem("openformu-theme-enhancer") ||
+              localStorage.getItem("openformul-theme-enhancer");
+            uiMode = legacyEnhancer === "false" ? "biasa" : "enhanced";
+          }
 
           var root = document.documentElement;
           root.setAttribute("data-theme", palette);
           root.setAttribute("data-mode", resolvedMode);
+          root.setAttribute("data-ui-mode", uiMode);
+          root.setAttribute("data-ui-enhancer", uiMode === "enhanced" ? "true" : "false");
           if (resolvedMode === "dark") {
             root.classList.add("dark");
             if (amoled) {

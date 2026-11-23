@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { HARTADI_FEEDS } from "../src/data/hartadi-feeds";
 import { KEARL_REQUIREMENTS, NRC_1988_DAIRY_REQUIREMENTS } from "../src/data/kearl-requirements";
-import { DEFAULT_CONFIG, MOCK_INGREDIENTS, MOCK_REQUIREMENTS } from "../src/data/mock-state";
+import {
+  DEFAULT_CONFIG,
+  MOCK_INGREDIENTS,
+  MOCK_REQUIREMENTS,
+  NRC_1994_POULTRY_REQUIREMENTS,
+} from "../src/data/mock-state";
 import { parseFeedJson, serializeRecipeToFeedJson } from "../src/storage/recipeTransfer";
 import type { Nutrient, Recipe } from "../src/types";
 import {
@@ -14,22 +19,29 @@ import {
   validateFormulationConfig,
   validateIngredient,
   validateRequirement,
+  validateUserPreferences,
 } from "../src/utils/validators";
 
 describe("Task 1 — Validators, .feed.json Transfer, CSV Partial Merge & TSV Paste", () => {
-  it("memvalidasi seluruh kurasi data Hartadi (304) & Kearl (82) + NRC (24) terhadap skema kanonik", () => {
-    expect(HARTADI_FEEDS.length).toBe(304);
+  it("memvalidasi seluruh kurasi data Hartadi + Kearl + NRC (1988 & 1994) terhadap skema kanonik tanpa duplikasi", () => {
+    expect(HARTADI_FEEDS.length).toBe(344);
     const hartadiIds = new Set<string>();
+    const hartadiIfns = new Set<string>();
     for (const ing of HARTADI_FEEDS) {
       expect(ing.isActive).toBe(false);
       expect(ing.source.trim().length).toBeGreaterThan(10);
       expect(hartadiIds.has(ing.id)).toBe(false);
       hartadiIds.add(ing.id);
+      const ifnMatch = /IFN\s+(\d-\d{2}-\d{3})/.exec(ing.source);
+      if (ifnMatch?.[1]) {
+        expect(hartadiIfns.has(ifnMatch[1])).toBe(false);
+        hartadiIfns.add(ifnMatch[1]);
+      }
       const checked = validateIngredient(ing);
       expect(checked.ok).toBe(true);
     }
 
-    expect(KEARL_REQUIREMENTS.length).toBe(82);
+    expect(KEARL_REQUIREMENTS.length).toBe(98);
     const reqIds = new Set<string>();
     for (const req of KEARL_REQUIREMENTS) {
       expect(req.basis).toBe("dry_matter");
@@ -44,6 +56,16 @@ describe("Task 1 — Validators, .feed.json Transfer, CSV Partial Merge & TSV Pa
     for (const req of NRC_1988_DAIRY_REQUIREMENTS) {
       expect(req.basis).toBe("dry_matter");
       expect(req.source?.includes("NRC (1988)")).toBe(true);
+      expect(reqIds.has(req.id)).toBe(false);
+      reqIds.add(req.id);
+      const checked = validateRequirement(req);
+      expect(checked.ok).toBe(true);
+    }
+
+    expect(NRC_1994_POULTRY_REQUIREMENTS.length).toBe(18);
+    for (const req of NRC_1994_POULTRY_REQUIREMENTS) {
+      expect(req.basis).toBe("as_fed");
+      expect(req.source?.includes("NRC (1994)")).toBe(true);
       expect(reqIds.has(req.id)).toBe(false);
       reqIds.add(req.id);
       const checked = validateRequirement(req);
@@ -214,5 +236,46 @@ describe("Task 1 — Validators, .feed.json Transfer, CSV Partial Merge & TSV Pa
     expect(reimported.errors).toEqual([]);
     expect(reimported.updatedCount).toBe(1);
     expect(reimported.ingredients[0]?.nutrients.custom_beta_glukan).toBe(2.35);
+  });
+
+  it("memvalidasi uiMode (biasa | enhanced | anti-slop), membersihkan input tidak valid, dan menjaga kompatibilitas uiEnhancer", () => {
+    for (const mode of ["biasa", "enhanced", "anti-slop"] as const) {
+      const res = validateUserPreferences({
+        language: "id",
+        theme: "light",
+        uiMode: mode,
+      });
+      expect(res.ok).toBe(true);
+      if (res.ok) {
+        expect(res.data.uiMode).toBe(mode);
+      }
+    }
+
+    for (const badMode of ["slop", 123, null, "__proto__", "constructor"]) {
+      const res = validateUserPreferences({
+        language: "en",
+        theme: "dark",
+        uiMode: badMode,
+      });
+      expect(res.ok).toBe(true);
+      if (res.ok) {
+        expect(res.data.uiMode).toBeUndefined();
+        expect("uiMode" in res.data).toBe(false);
+      }
+    }
+
+    const legacy = validateUserPreferences({
+      language: "id",
+      theme: "light",
+      uiEnhancer: false,
+      defaultBasis: "as_fed",
+      defaultBatchKg: 100,
+      zeroInclusionDefaultPct: 1,
+    });
+    expect(legacy.ok).toBe(true);
+    if (legacy.ok) {
+      expect(legacy.data.uiEnhancer).toBe(false);
+      expect(legacy.data.uiMode).toBeUndefined();
+    }
   });
 });

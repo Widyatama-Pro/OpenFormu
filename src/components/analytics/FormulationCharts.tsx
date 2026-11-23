@@ -9,6 +9,7 @@ import type {
   Nutrient,
   NutrientResult,
 } from "../../types";
+import { cn } from "../../utils/cn";
 import { formatNumberLocale, resolveDisplayDigits } from "../../utils/locale-number";
 import { NeumorphicProgressTrack } from "../ui/NeumorphicProgressTrack";
 
@@ -33,7 +34,8 @@ export const FormulationCharts = memo(function FormulationCharts({
   simpleMode = true,
   language = "id",
 }: FormulationChartsProps) {
-  const { paletteId, resolvedMode, amoledPureBlack } = useTheme();
+  const { paletteId, resolvedMode, amoledPureBlack, uiMode } = useTheme();
+  const isAntiSlop = uiMode === "anti-slop";
   const themeSignature = `${paletteId}-${resolvedMode}-${amoledPureBlack ? "amoled" : "std"}`;
 
   const ingMap = new Map(ingredients.map((i) => [i.id, i]));
@@ -72,20 +74,41 @@ export const FormulationCharts = memo(function FormulationCharts({
   });
   const actualPolygon = getPolygonPoints(actualRatios);
 
+  const chartCardClass = isAntiSlop
+    ? "rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-elevated)] p-3"
+    : "glass-card rounded-xl p-2.5";
+
   return (
     <div data-theme-chart={themeSignature} className="grid grid-cols-1 gap-2.5 xl:grid-cols-2">
-      {/* Radar Chart Target Ideal vs Hasil Aktual (ukuran ringkas) */}
-      <div className="glass-card rounded-xl p-2.5">
+      {/* Radar Chart Target Ideal vs Hasil Aktual */}
+      <div className={chartCardClass}>
         <div className="mb-1.5 flex items-center justify-between gap-2">
           <h3 className="text-xs font-bold text-[var(--text-primary)]">
-            {pickLang(language, "Radar Target Ideal vs Aktual", "Ideal Target vs Actual Radar")}
+            {isAntiSlop
+              ? pickLang(
+                  language,
+                  "Seberapa Dekat Hasil Aktual ke Target Ideal?",
+                  "How Close Are Actual Nutrients to Targets?",
+                )
+              : pickLang(language, "Radar Target Ideal vs Aktual", "Ideal Target vs Actual Radar")}
           </h3>
           <div className="flex items-center gap-2.5 text-[10px] font-medium">
             <span className="inline-flex items-center gap-1 text-[var(--text-secondary)]">
-              <span className="h-2 w-2 rounded-full bg-[var(--chart-radar-target)]" /> Target
+              <span
+                className={cn(
+                  "h-2 w-2 bg-[var(--chart-radar-target)]",
+                  isAntiSlop ? "rounded-xs" : "rounded-full",
+                )}
+              />{" "}
+              Target
             </span>
             <span className="inline-flex items-center gap-1 text-[var(--chart-radar-actual-stroke)]">
-              <span className="h-2 w-2 rounded-full bg-[var(--chart-radar-actual-stroke)]" />{" "}
+              <span
+                className={cn(
+                  "h-2 w-2 bg-[var(--chart-radar-actual-stroke)]",
+                  isAntiSlop ? "rounded-xs" : "rounded-full",
+                )}
+              />{" "}
               {pickLang(language, "Aktual", "Actual")}
             </span>
           </div>
@@ -101,7 +124,12 @@ export const FormulationCharts = memo(function FormulationCharts({
           </p>
         ) : (
           <div className="flex justify-center">
-            <svg viewBox="0 0 180 180" className="h-32 w-32" role="img" aria-label="Radar nutrien">
+            <svg
+              viewBox={isAntiSlop ? "-12 -12 204 204" : "0 0 180 180"}
+              className={isAntiSlop ? "h-44 w-44 sm:h-48 sm:w-48" : "h-32 w-32"}
+              role="img"
+              aria-label="Radar nutrien"
+            >
               {[0.5, 1].map((ring) => (
                 <circle
                   key={ring}
@@ -117,8 +145,8 @@ export const FormulationCharts = memo(function FormulationCharts({
                 const angle = (Math.PI * 2 * i) / radarItems.length - Math.PI / 2;
                 const x2 = cx + Math.cos(angle) * maxR;
                 const y2 = cy + Math.sin(angle) * maxR;
-                const lx = cx + Math.cos(angle) * (maxR + 16);
-                const ly = cy + Math.sin(angle) * (maxR + 16);
+                const lx = cx + Math.cos(angle) * (maxR + (isAntiSlop ? 18 : 16));
+                const ly = cy + Math.sin(angle) * (maxR + (isAntiSlop ? 18 : 16));
                 const meta = nutMap.get(item.nutrientId);
                 const axisLabel = meta ? getNutrientShortName(meta, language) : item.nutrientId;
                 return (
@@ -130,7 +158,7 @@ export const FormulationCharts = memo(function FormulationCharts({
                       textAnchor="middle"
                       dominantBaseline="middle"
                       fill="var(--text-secondary)"
-                      className="text-[9px] font-bold"
+                      className={isAntiSlop ? "text-[10.5px] font-bold" : "text-[9px] font-bold"}
                     >
                       {axisLabel}
                     </text>
@@ -155,15 +183,21 @@ export const FormulationCharts = memo(function FormulationCharts({
         )}
       </div>
 
-      {/* Bar Chart Porsi Berat (%) vs Porsi Biaya (%) — kompak */}
-      <div className="glass-card rounded-xl p-2.5">
+      {/* Bar Chart Porsi Berat (%) vs Porsi Biaya (%) */}
+      <div className={chartCardClass}>
         <div className="mb-2 flex items-center justify-between gap-2">
           <h3 className="text-xs font-bold text-[var(--text-primary)]">
-            {pickLang(
-              language,
-              "Porsi Berat (%) vs Porsi Biaya (%)",
-              "Weight Share (%) vs Cost Share (%)",
-            )}
+            {isAntiSlop
+              ? pickLang(
+                  language,
+                  "Bahan Mana yang Paling Menguras Biaya vs Porsi Berat?",
+                  "Which Feeds Drive Ration Cost vs Weight Share?",
+                )
+              : pickLang(
+                  language,
+                  "Porsi Berat (%) vs Porsi Biaya (%)",
+                  "Weight Share (%) vs Cost Share (%)",
+                )}
           </h3>
           <div className="flex items-center gap-2.5 text-[10px] font-medium">
             <span className="inline-flex items-center gap-1 text-[var(--chart-weight-bar)]">
@@ -177,106 +211,142 @@ export const FormulationCharts = memo(function FormulationCharts({
           </div>
         </div>
 
-        <div className="space-y-1.5">
-          {composition.slice(0, 5).map((item) => {
-            const ing = ingMap.get(item.ingredientId);
-            const weightPct = item.fraction * 100;
-            const costPct =
-              totalCostContribution > 0 && item.costContribution !== undefined
-                ? (Math.max(0, item.costContribution) / totalCostContribution) * 100
-                : weightPct;
-            const ingName = ing
-              ? language === "id"
-                ? ing.name
-                : (ing.nameEn ?? ing.name)
-              : item.ingredientId;
+        {composition.length === 0 ? (
+          <p className="py-6 text-center text-xs text-[var(--text-secondary)]">
+            {pickLang(
+              language,
+              "Belum ada komposisi bahan aktif untuk membandingkan porsi berat dan biaya.",
+              "No active feed composition yet to compare weight and cost shares.",
+            )}
+          </p>
+        ) : (
+          <div className="space-y-1.5">
+            {composition.slice(0, 5).map((item) => {
+              const ing = ingMap.get(item.ingredientId);
+              const weightPct = item.fraction * 100;
+              const costPct =
+                totalCostContribution > 0 && item.costContribution !== undefined
+                  ? (Math.max(0, item.costContribution) / totalCostContribution) * 100
+                  : weightPct;
+              const ingName = ing
+                ? language === "id"
+                  ? ing.name
+                  : (ing.nameEn ?? ing.name)
+                : item.ingredientId;
 
-            return (
-              <div key={item.ingredientId} className="space-y-0.5 text-[11px]">
-                <div className="flex justify-between gap-2">
-                  <span className="truncate font-semibold text-[var(--text-primary)]">
-                    {ingName}
-                  </span>
-                  <span className="shrink-0 text-[10px] tabular-nums text-[var(--text-secondary)]">
-                    {formatNumberLocale(
-                      weightPct,
-                      resolveDisplayDigits("%", "inclusion", decimalPlaces, weightPct),
-                    )}
-                    % {pickLang(language, "berat", "wt")} ·{" "}
-                    {formatNumberLocale(
-                      costPct,
-                      resolveDisplayDigits("%", "inclusion", decimalPlaces, costPct),
-                    )}
-                    % {pickLang(language, "biaya", "cost")}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 gap-0.5">
-                  <div className="neu-well h-1.5 w-full overflow-hidden rounded-full">
-                    <div
-                      className="h-full rounded-full bg-[var(--chart-weight-bar)]"
-                      style={{ width: `${Math.min(100, weightPct)}%` }}
-                    />
+              return (
+                <div key={item.ingredientId} className="space-y-0.5 text-[11px]">
+                  <div className="flex justify-between gap-2">
+                    <span className="truncate font-semibold text-[var(--text-primary)]">
+                      {ingName}
+                    </span>
+                    <span className="shrink-0 text-[10px] tabular-nums text-[var(--text-secondary)]">
+                      {formatNumberLocale(
+                        weightPct,
+                        resolveDisplayDigits("%", "inclusion", decimalPlaces, weightPct),
+                      )}
+                      % {pickLang(language, "berat", "wt")} ·{" "}
+                      {formatNumberLocale(
+                        costPct,
+                        resolveDisplayDigits("%", "inclusion", decimalPlaces, costPct),
+                      )}
+                      % {pickLang(language, "biaya", "cost")}
+                    </span>
                   </div>
-                  <div className="neu-well h-1.5 w-full overflow-hidden rounded-full">
+                  <div className="grid grid-cols-1 gap-0.5">
                     <div
-                      className="h-full rounded-full bg-[var(--chart-cost-bar)]"
-                      style={{ width: `${Math.min(100, costPct)}%` }}
-                    />
+                      className={cn(
+                        "h-1.5 w-full overflow-hidden rounded-full",
+                        isAntiSlop ? "bg-[var(--bg-sunken)]" : "neu-well",
+                      )}
+                    >
+                      <div
+                        className="h-full rounded-full bg-[var(--chart-weight-bar)]"
+                        style={{ width: `${Math.min(100, weightPct)}%` }}
+                      />
+                    </div>
+                    <div
+                      className={cn(
+                        "h-1.5 w-full overflow-hidden rounded-full",
+                        isAntiSlop ? "bg-[var(--bg-sunken)]" : "neu-well",
+                      )}
+                    >
+                      <div
+                        className="h-full rounded-full bg-[var(--chart-cost-bar)]"
+                        style={{ width: `${Math.min(100, costPct)}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Bar Rentang Pencapaian Nutrien — kompak */}
-      <div className="glass-card rounded-xl p-2.5 xl:col-span-2">
+      {/* Bar Rentang Pencapaian Nutrien */}
+      <div className={cn(chartCardClass, "xl:col-span-2")}>
         <h3 className="mb-2 text-xs font-bold text-[var(--text-primary)]">
-          {pickLang(
-            language,
-            "Indikator Rentang Pencapaian Nutrien (Min–Max)",
-            "Nutrient Target Range Indicators (Min–Max)",
-          )}
+          {isAntiSlop
+            ? pickLang(
+                language,
+                "Nutrien Mana yang Berada di Dalam Rentang Aman?",
+                "Which Nutrients Stay Within Target Bounds?",
+              )
+            : pickLang(
+                language,
+                "Indikator Rentang Pencapaian Nutrien (Min–Max)",
+                "Nutrient Target Range Indicators (Min–Max)",
+              )}
         </h3>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          {radarItems.map((n) => {
-            const meta = nutMap.get(n.nutrientId);
-            const lo = n.min ?? 0;
-            const hi = n.max ?? (n.min !== undefined ? n.min * 1.25 : n.value * 1.25);
-            const scaleMax = Math.max(hi * 1.15, n.value * 1.05, 1);
-            const minPct = (lo / scaleMax) * 100;
-            const maxPct = (hi / scaleMax) * 100;
-            const valPct = Math.min(100, Math.max(0, (n.value / scaleMax) * 100));
-            const nutName = meta
-              ? getNutrientDisplayName(meta, language, simpleMode)
-              : n.nutrientId;
+        {radarItems.length === 0 ? (
+          <p className="py-4 text-center text-xs text-[var(--text-secondary)]">
+            {pickLang(
+              language,
+              "Belum ada batasan target nutrien aktif untuk dipantau rentangnya.",
+              "No active nutrient target bounds to display range indicators.",
+            )}
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {radarItems.map((n) => {
+              const meta = nutMap.get(n.nutrientId);
+              const lo = n.min ?? 0;
+              const hi = n.max ?? (n.min !== undefined ? n.min * 1.25 : n.value * 1.25);
+              const scaleMax = Math.max(hi * 1.15, n.value * 1.05, 1);
+              const minPct = (lo / scaleMax) * 100;
+              const maxPct = (hi / scaleMax) * 100;
+              const valPct = Math.min(100, Math.max(0, (n.value / scaleMax) * 100));
+              const nutName = meta
+                ? getNutrientDisplayName(meta, language, simpleMode)
+                : n.nutrientId;
 
-            return (
-              <div key={n.nutrientId} className="space-y-1 text-[11px]">
-                <div className="flex justify-between gap-1">
-                  <span className="truncate font-semibold text-[var(--text-primary)]">
-                    {nutName}
-                  </span>
-                  <span className="shrink-0 font-semibold tabular-nums text-[var(--text-secondary)]">
-                    {formatNumberLocale(
-                      n.value,
-                      resolveDisplayDigits(meta?.unit, n.nutrientId, decimalPlaces, n.value),
-                    )}{" "}
-                    {meta?.unit ?? ""}
-                  </span>
+              return (
+                <div key={n.nutrientId} className="space-y-1 text-[11px]">
+                  <div className="flex justify-between gap-1">
+                    <span className="truncate font-semibold text-[var(--text-primary)]">
+                      {nutName}
+                    </span>
+                    <span className="shrink-0 font-semibold tabular-nums text-[var(--text-secondary)]">
+                      {formatNumberLocale(
+                        n.value,
+                        resolveDisplayDigits(meta?.unit, n.nutrientId, decimalPlaces, n.value),
+                      )}{" "}
+                      {meta?.unit ?? ""}
+                    </span>
+                  </div>
+                  <NeumorphicProgressTrack
+                    percent={valPct}
+                    rangeStartPct={minPct}
+                    rangeWidthPct={Math.max(4, maxPct - minPct)}
+                    tone={n.status === "met" ? "emerald" : "coral"}
+                    showThumb
+                  />
                 </div>
-                <NeumorphicProgressTrack
-                  percent={valPct}
-                  rangeStartPct={minPct}
-                  rangeWidthPct={Math.max(4, maxPct - minPct)}
-                  tone={n.status === "met" ? "emerald" : "coral"}
-                  showThumb
-                />
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

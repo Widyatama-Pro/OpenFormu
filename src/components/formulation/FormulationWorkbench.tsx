@@ -12,6 +12,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { FEED_CLASSES, getFeedClassLabel, resolveFeedClass } from "../../data/feed-classes";
 import type { PrototypeStore } from "../../hooks/use-prototype-store";
 import { getFormulationStatusLabel, pickLang } from "../../i18n";
+import { useOptionalThemeContext } from "../../theme";
 import type { FeedClassCode, Ingredient, TableViewTier } from "../../types";
 import { cn } from "../../utils/cn";
 import { formatCurrencyIdr } from "../../utils/locale-number";
@@ -166,6 +167,7 @@ export function FormulationWorkbench({
   }, []);
 
   const language = store.preferences.language;
+  const isAntiSlop = useOptionalThemeContext()?.uiMode === "anti-slop";
   const simpleMode = store.preferences.simpleMode ?? !store.config.enableAdvanceNutrients;
   const showNdf = store.config.showNdf === true;
   const showBetn = store.config.showBetn === true;
@@ -298,39 +300,62 @@ export function FormulationWorkbench({
       </div>
 
       <AnimatePresence>
-        {store.isSolving && (
-          <motion.div
-            key="solving-toast"
-            role="status"
-            aria-live="polite"
-            data-solving-toast="top-right"
-            initial={{ opacity: 0, y: -10, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.96 }}
-            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-            className="acrylic-panel pointer-events-none fixed top-14 right-4 z-50 flex items-center gap-2.5 rounded-2xl border border-[var(--status-success-border)] px-3.5 py-2 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.28)] backdrop-blur-xl"
-          >
-            <span
-              aria-hidden="true"
-              className="inline-block h-2 w-2 shrink-0 rounded-full bg-[var(--status-success)] shadow-[0_0_8px_var(--status-success)]"
-            />
-            <span className="text-[11px] font-bold whitespace-nowrap text-[var(--status-success)]">
-              {pickLang(language, "Menghitung formula optimal…", "Computing optimal ration…")}
-            </span>
-            <div className="skeleton-shimmer h-1.5 w-14 shrink-0 rounded-full" />
-          </motion.div>
-        )}
+        {store.isSolving &&
+          (isAntiSlop ? (
+            <div
+              role="status"
+              aria-live="polite"
+              data-solving-toast="top-right"
+              className="pointer-events-none fixed top-14 right-4 z-50 flex items-center gap-2 rounded-lg border border-[var(--status-success-border)] bg-[var(--bg-surface-elevated)] px-3.5 py-2 shadow-[var(--shadow-neu-elevated)]"
+            >
+              <span
+                aria-hidden="true"
+                className="inline-block h-2 w-2 shrink-0 rounded-full bg-[var(--status-success)]"
+              />
+              <span className="text-[11px] font-bold whitespace-nowrap text-[var(--status-success)]">
+                {pickLang(language, "Menghitung formula optimal…", "Computing optimal ration…")}
+              </span>
+            </div>
+          ) : (
+            <motion.div
+              key="solving-toast"
+              role="status"
+              aria-live="polite"
+              data-solving-toast="top-right"
+              initial={{ opacity: 0, y: -10, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.96 }}
+              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+              className="acrylic-panel pointer-events-none fixed top-14 right-4 z-50 flex items-center gap-2.5 rounded-2xl border border-[var(--status-success-border)] px-3.5 py-2 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.28)] backdrop-blur-xl"
+            >
+              <span
+                aria-hidden="true"
+                className="inline-block h-2 w-2 shrink-0 rounded-full bg-[var(--status-success)] shadow-[0_0_8px_var(--status-success)]"
+              />
+              <span className="text-[11px] font-bold whitespace-nowrap text-[var(--status-success)]">
+                {pickLang(language, "Menghitung formula optimal…", "Computing optimal ration…")}
+              </span>
+              <div className="skeleton-shimmer h-1.5 w-14 shrink-0 rounded-full" />
+            </motion.div>
+          ))}
       </AnimatePresence>
 
       {/* Mobile & Tablet Sticky Stepper (< lg): tetap menempel saat kontrol atas tergulir keluar */}
-      <div className="sticky top-0 z-20 shrink-0 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-1.5 shadow-[0_2px_10px_rgba(0,0,0,0.06)] lg:hidden">
+      <div
+        className={cn(
+          "sticky top-0 z-20 shrink-0 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-1.5 lg:hidden",
+          !isAntiSlop && "shadow-[0_2px_10px_rgba(0,0,0,0.06)]",
+        )}
+      >
         {mobileScrolledCompact && (
           <div className="mb-1.5 flex items-center justify-between gap-2 text-[11px]">
             <div className="flex min-w-0 items-center gap-1.5 truncate">
               <span className="font-bold tabular-nums text-[var(--status-warning)]">
                 {store.result.costPerKg !== null
                   ? `${formatCurrencyIdr(store.result.costPerKg)}/kg`
-                  : "—"}
+                  : isAntiSlop
+                    ? "-"
+                    : "—"}
               </span>
               <Badge
                 tone={
@@ -347,9 +372,17 @@ export function FormulationWorkbench({
             <button
               type="button"
               onClick={handleOpenMobileControls}
-              className="neu-pill-btn inline-flex min-h-7 shrink-0 cursor-pointer items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-bold text-[var(--text-primary)]"
+              className={cn(
+                "inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1 rounded-lg px-2.5 py-1 text-[10px] font-bold text-[var(--text-primary)] md:min-h-7",
+                isAntiSlop
+                  ? "border border-[var(--border-strong)] bg-[var(--bg-surface-elevated)] hover:border-[var(--color-primary)]"
+                  : "neu-pill-btn",
+              )}
             >
-              <SlidersHorizontal className="h-3 w-3 text-[var(--color-primary)]" />
+              <SlidersHorizontal
+                className="h-3 w-3 text-[var(--color-primary)]"
+                aria-hidden="true"
+              />
               <span>{pickLang(language, "Kontrol", "Controls")}</span>
             </button>
           </div>
@@ -372,9 +405,13 @@ export function FormulationWorkbench({
 
       {/* Desktop Workspace: Kiri (Tabel Pakan Digunakan + Tabel Semua Bahan + Hasil) & Kanan (Target Nutrien) */}
       <motion.div
-        variants={WORKBENCH_STAGGER}
-        initial="hidden"
-        animate="visible"
+        {...(isAntiSlop
+          ? {}
+          : {
+              variants: WORKBENCH_STAGGER,
+              initial: "hidden",
+              animate: "visible",
+            })}
         className={cn(
           "hidden min-h-0 flex-1 gap-3.5 p-3 lg:grid lg:px-4",
           inspectorOpen ? "lg:grid-cols-[minmax(0,2.7fr)_352px]" : "lg:grid-cols-[minmax(0,1fr)]",
@@ -382,18 +419,28 @@ export function FormulationWorkbench({
       >
         {/* Area Kerja Utama dengan scrollbar lebar khusus (.workspace-main-scrollbar) agar jelas dibedakan dari tabel */}
         <div className="workspace-main-scrollbar flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto overscroll-contain pr-2">
-          {/* TABEL 1: Pakan yang Digunakan (3-Layer Acrylic Glass + Emerald Header Icon) */}
-          <motion.div variants={WORKBENCH_PANEL_ITEM} className="shrink-0">
+          <motion.div
+            {...(isAntiSlop ? {} : { variants: WORKBENCH_PANEL_ITEM })}
+            className="shrink-0"
+          >
             <Card
               interactive={false}
               aria-label={pickLang(language, "Panel Bahan Pakan", "Feed Ingredients Panel")}
-              className="acrylic-panel selectable-panel flex flex-col overflow-hidden p-3.5"
+              className={cn(
+                "selectable-panel flex flex-col overflow-hidden p-3.5",
+                !isAntiSlop && "acrylic-panel",
+              )}
             >
               <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5">
                 <div className="flex items-center gap-2">
                   <span
                     aria-hidden="true"
-                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border border-[var(--status-success-border)] bg-[var(--status-success-soft)] text-[var(--status-success)] shadow-[0_0_12px_var(--glow-success-pill,transparent)]"
+                    className={cn(
+                      "inline-flex h-7 w-7 shrink-0 items-center justify-center border border-[var(--status-success-border)] bg-[var(--status-success-soft)] text-[var(--status-success)]",
+                      isAntiSlop
+                        ? "rounded-lg"
+                        : "rounded-xl shadow-[0_0_12px_var(--glow-success-pill,transparent)]",
+                    )}
                   >
                     <Layers className="h-4 w-4" />
                   </span>
@@ -408,20 +455,26 @@ export function FormulationWorkbench({
                   variant="secondary"
                   size="sm"
                   onClick={onOpenAddIngredient}
-                  className="acrylic-control-capsule rounded-xl"
+                  className={cn(!isAntiSlop && "acrylic-control-capsule rounded-xl")}
                 >
-                  <Plus className="h-3.5 w-3.5" />
+                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
                   <span>{pickLang(language, "Tambah Bahan Baru", "Add New Feed")}</span>
                 </Button>
               </div>
 
               {usedIngredients.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-[var(--border-subtle)] bg-[var(--bg-sunken)] py-8 text-center text-xs text-[var(--text-secondary)]">
-                  {pickLang(
-                    language,
-                    'Belum ada bahan aktif. Centang bahan pada tabel "Daftar Semua Bahan" di bawah untuk mulai meracik.',
-                    'No active ingredients yet. Check feeds in the "All Ingredients" table below to start formulating.',
-                  )}
+                <div className="flex flex-col items-center justify-center gap-2.5 rounded-lg border border-dashed border-[var(--border-subtle)] bg-[var(--bg-sunken)] px-4 py-8 text-center text-xs text-[var(--text-secondary)]">
+                  <p>
+                    {pickLang(
+                      language,
+                      'Belum ada bahan aktif. Centang bahan pada tabel "Daftar Semua Bahan" di bawah atau tambahkan bahan baru.',
+                      'No active ingredients yet. Check feeds in the "All Ingredients" table below or add a new feed.',
+                    )}
+                  </p>
+                  <Button variant="primary" size="sm" onClick={onOpenAddIngredient}>
+                    <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span>{pickLang(language, "Tambah Bahan Baru", "Add New Feed")}</span>
+                  </Button>
                 </div>
               ) : (
                 <IngredientDesktopTable
@@ -448,8 +501,10 @@ export function FormulationWorkbench({
             </Card>
           </motion.div>
 
-          {/* TABEL 2: Daftar Semua Bahan (3-Layer Acrylic Glass Katalog Referensi) */}
-          <motion.div variants={WORKBENCH_PANEL_ITEM} className="shrink-0">
+          <motion.div
+            {...(isAntiSlop ? {} : { variants: WORKBENCH_PANEL_ITEM })}
+            className="shrink-0"
+          >
             <Card
               interactive={false}
               aria-label={pickLang(
@@ -457,7 +512,10 @@ export function FormulationWorkbench({
                 "Tabel Semua Bahan Pakan",
                 "All Feed Ingredients Table",
               )}
-              className="acrylic-panel selectable-panel flex flex-col overflow-hidden p-3.5"
+              className={cn(
+                "selectable-panel flex flex-col overflow-hidden p-3.5",
+                !isAntiSlop && "acrylic-panel",
+              )}
             >
               <div className="flex flex-wrap items-center justify-between gap-2 pb-2">
                 <div className="flex items-center gap-2">
@@ -485,7 +543,7 @@ export function FormulationWorkbench({
                         "Cari semua bahan pakan",
                         "Search all feed ingredients",
                       )}
-                      className="h-8 min-h-8 pl-8 text-xs md:min-h-8"
+                      className="min-h-11 pl-8 text-xs md:h-8 md:min-h-8"
                     />
                   </div>
                   <div className="w-52">
@@ -509,7 +567,7 @@ export function FormulationWorkbench({
                           val === "all" ? "all" : (Number(val) as FeedClassCode),
                         );
                       }}
-                      className="h-8 min-h-8 py-0 text-[11px]"
+                      className="min-h-11 py-0 text-[11px] md:h-8 md:min-h-8"
                     />
                   </div>
                   <Button
@@ -517,16 +575,16 @@ export function FormulationWorkbench({
                     size="sm"
                     onClick={() => setCatalogExpanded((prev) => !prev)}
                     aria-expanded={catalogExpanded}
-                    className="min-h-8 px-2 text-xs md:min-h-8"
+                    className="min-h-11 px-2.5 text-xs md:min-h-8 md:px-2"
                   >
                     {catalogExpanded ? (
                       <>
-                        <ChevronUp className="h-3.5 w-3.5" />
+                        <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
                         <span>{pickLang(language, "Tutup", "Hide")}</span>
                       </>
                     ) : (
                       <>
-                        <ChevronDown className="h-3.5 w-3.5" />
+                        <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
                         <span>{pickLang(language, "Buka", "Show")}</span>
                       </>
                     )}
@@ -554,9 +612,8 @@ export function FormulationWorkbench({
             </Card>
           </motion.div>
 
-          {/* Panel Hasil Formulasi */}
           <motion.section
-            variants={WORKBENCH_PANEL_ITEM}
+            {...(isAntiSlop ? {} : { variants: WORKBENCH_PANEL_ITEM })}
             aria-label={pickLang(language, "Panel Hasil Formulasi", "Formulation Results Panel")}
             className="min-h-[260px] shrink-0"
           >
@@ -564,10 +621,9 @@ export function FormulationWorkbench({
           </motion.section>
         </div>
 
-        {/* Panel Sekunder Kanan Collapsible (lebar 352px) */}
         {inspectorOpen && (
           <motion.section
-            variants={WORKBENCH_PANEL_ITEM}
+            {...(isAntiSlop ? {} : { variants: WORKBENCH_PANEL_ITEM })}
             aria-label={pickLang(language, "Panel Target Nutrien", "Nutrient Targets Panel")}
             className="min-h-0 w-[352px]"
           >
@@ -591,24 +647,45 @@ export function FormulationWorkbench({
                 <Button
                   variant="ghost"
                   size="sm"
+                  aria-pressed={mobileTableMode}
                   onClick={() => setMobileTableMode((v) => !v)}
-                  className="neu-pill-btn rounded-lg"
+                  className={cn(
+                    "min-h-11 min-w-11 px-0 md:min-h-8 md:min-w-8",
+                    !isAntiSlop && "neu-pill-btn rounded-lg",
+                  )}
                   aria-label={pickLang(
                     language,
                     "Ganti tampilan Kartu atau Tabel Kompak",
                     "Toggle Card or Compact Table View",
                   )}
                 >
-                  <Table className="h-4 w-4" />
+                  <Table className="h-4 w-4" aria-hidden="true" />
                 </Button>
                 <Button variant="secondary" size="sm" onClick={onOpenAddIngredient}>
-                  <Plus className="h-3.5 w-3.5" />
+                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
                   <span>{pickLang(language, "Tambah", "Add")}</span>
                 </Button>
               </div>
             </div>
 
-            {mobileTableMode ? (
+            {usedIngredients.length === 0 ? (
+              <Card
+                interactive={false}
+                className="p-6 text-center text-xs text-[var(--text-secondary)]"
+              >
+                <p>
+                  {pickLang(
+                    language,
+                    "Belum ada bahan aktif dalam formulasi. Tambahkan bahan baru atau aktifkan dari Database Bahan.",
+                    "No active feeds in this formulation yet. Add a new feed or enable feeds from the Ingredient Database.",
+                  )}
+                </p>
+                <Button variant="primary" size="sm" onClick={onOpenAddIngredient} className="mt-3">
+                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>{pickLang(language, "Tambah Bahan Baru", "Add New Feed")}</span>
+                </Button>
+              </Card>
+            ) : mobileTableMode ? (
               <div className="landscape-table-box h-[55dvh]">
                 <IngredientDesktopTable
                   ingredients={usedIngredients}

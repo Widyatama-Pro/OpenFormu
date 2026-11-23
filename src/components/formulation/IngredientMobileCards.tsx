@@ -2,6 +2,7 @@ import { memo } from "react";
 import { ChevronRight, RotateCcw } from "lucide-react";
 import { resolveFeedClass } from "../../data/feed-classes";
 import { getCategoryLabel, pickLang } from "../../i18n";
+import { useOptionalThemeContext } from "../../theme";
 import type { AppLanguage, Ingredient } from "../../types";
 import { cn } from "../../utils/cn";
 import {
@@ -43,6 +44,7 @@ export const IngredientMobileCards = memo(function IngredientMobileCards({
   onResetPriceOverride,
   onOpenDetail,
 }: IngredientMobileCardsProps) {
+  const isAntiSlop = useOptionalThemeContext()?.uiMode === "anti-slop";
   const isRuminant = isRuminantSpecies(activeSpecies);
   const isPoultry = isPoultrySpecies(activeSpecies);
 
@@ -119,7 +121,7 @@ export const IngredientMobileCards = memo(function IngredientMobileCards({
             className={cn("p-3.5", !isActive && "opacity-60")}
           >
             {/* Baris 1A: Checkbox + Ikon Kelas Kontekstual + Judul Nama Bahan Penuh (max 2 baris) */}
-            <label className="flex min-h-9 min-w-0 cursor-pointer items-start gap-2.5">
+            <label className="flex min-h-11 min-w-0 cursor-pointer items-start gap-2.5 md:min-h-9">
               <input
                 type="checkbox"
                 checked={isActive}
@@ -150,21 +152,24 @@ export const IngredientMobileCards = memo(function IngredientMobileCards({
               </div>
 
               <Button
-                variant="ghost"
+                variant={isAntiSlop ? "secondary" : "ghost"}
                 size="sm"
                 onClick={() => onOpenDetail(ing)}
                 aria-label={`Edit nutrien ${ing.name}`}
-                className="neu-pill-btn min-h-8 shrink-0 rounded-lg px-2.5 text-xs md:min-h-8"
+                className={cn(
+                  "min-h-11 shrink-0 rounded-lg px-2.5 text-xs md:min-h-8",
+                  !isAntiSlop && "neu-pill-btn",
+                )}
               >
                 <span>{pickLang(language, "Nutrien", "Nutrients")}</span>
-                <ChevronRight className="h-3.5 w-3.5" />
+                <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
               </Button>
             </div>
 
             {/* Baris 2: Input Harga/kg, Min %, dan Max % selalu aktif & simetris */}
             <div className="mt-3 grid grid-cols-3 gap-2">
               <div>
-                <div className="mb-1 flex items-center justify-between">
+                <div className="mb-1 flex min-h-6 items-center justify-between gap-1">
                   <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
                     {pickLang(language, "Harga/kg", "Price/kg")}
                   </span>
@@ -173,9 +178,9 @@ export const IngredientMobileCards = memo(function IngredientMobileCards({
                       type="button"
                       onClick={() => onResetPriceOverride(ing.id)}
                       aria-label={`Reset harga pasar ${ing.name}`}
-                      className="cursor-pointer text-[var(--status-warning)]"
+                      className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-md text-[var(--status-warning)] hover:bg-[var(--status-warning-soft)] md:min-h-6 md:min-w-6"
                     >
-                      <RotateCcw className="h-3 w-3" />
+                      <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
                     </button>
                   )}
                 </div>
@@ -201,7 +206,7 @@ export const IngredientMobileCards = memo(function IngredientMobileCards({
                 </span>
                 <NumericCellInput
                   value={min}
-                  fractionDigits={resolveDisplayDigits("%", "inclusion", decimalPlaces, min)}
+                  fractionDigits={resolveDisplayDigits("%", "min", decimalPlaces, min)}
                   invalid={invalidBounds}
                   ariaLabel={`Min % ${ing.name}`}
                   onCommit={(next) =>
@@ -218,7 +223,7 @@ export const IngredientMobileCards = memo(function IngredientMobileCards({
                 </span>
                 <NumericCellInput
                   value={max}
-                  fractionDigits={resolveDisplayDigits("%", "inclusion", decimalPlaces, max)}
+                  fractionDigits={resolveDisplayDigits("%", "max", decimalPlaces, max)}
                   invalid={invalidBounds}
                   ariaLabel={`Max % ${ing.name}`}
                   onCommit={(next) =>
@@ -247,7 +252,10 @@ export const IngredientMobileCards = memo(function IngredientMobileCards({
                 `Nutrien dasar ${ingName}`,
                 `Basic nutrients ${ingName}`,
               )}
-              className="mt-3 grid grid-cols-4 gap-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-sunken)]/50 p-2 tabular-nums"
+              className={cn(
+                "mt-3 grid grid-cols-4 gap-1.5 rounded-xl border border-[var(--border-subtle)] p-2 tabular-nums",
+                isAntiSlop ? "bg-[var(--bg-sunken)]" : "bg-[var(--bg-sunken)]/50",
+              )}
             >
               {nutrientCells.map((cell) => (
                 <div key={cell.id} className="min-w-0 rounded-lg px-1 py-0.5">

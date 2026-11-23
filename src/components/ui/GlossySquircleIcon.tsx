@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import { useOptionalThemeContext } from "../../theme";
 import { cn } from "../../utils/cn";
 
 export type SquircleTone = "sky" | "mint" | "coral" | "orchid" | "amber" | "indigo" | "petrol";
@@ -29,6 +30,18 @@ const TONE_STYLES: Record<SquircleTone, CSSProperties> = {
   petrol: buildSquircleStyle("var(--color-primary)"),
 };
 
+const ANTI_SLOP_TONE_CLASSES: Record<SquircleTone, string> = {
+  sky: "border-[var(--status-info-border)] bg-[var(--status-info-soft)] text-[var(--status-info)]",
+  mint: "border-[var(--status-success-border)] bg-[var(--status-success-soft)] text-[var(--status-success)]",
+  coral:
+    "border-[var(--status-danger-border)] bg-[var(--status-danger-soft)] text-[var(--status-danger)]",
+  orchid: "border-[var(--border-strong)] bg-[var(--accent-soft)] text-[var(--text-primary)]",
+  amber:
+    "border-[var(--status-warning-border)] bg-[var(--status-warning-soft)] text-[var(--status-warning)]",
+  indigo: "border-[var(--border-strong)] bg-[var(--bg-sunken)] text-[var(--text-primary)]",
+  petrol: "border-[var(--border-strong)] bg-[var(--primary-soft)] text-[var(--text-primary)]",
+};
+
 const SIZE_CLASSES: Record<SquircleSize, string> = {
   xs: "h-7 w-7 rounded-[9px]",
   sm: "h-9 w-9 rounded-[11px]",
@@ -36,16 +49,37 @@ const SIZE_CLASSES: Record<SquircleSize, string> = {
   lg: "h-14 w-14 rounded-[18px]",
 };
 
-/**
- * Ikon squircle kaca berlapis gradien semantik & kilap spekular lembut
- * yang beradaptasi terhadap 14 varian tema.
- */
+const ANTI_SLOP_SIZE_CLASSES: Record<SquircleSize, string> = {
+  xs: "h-7 w-7 rounded-lg",
+  sm: "h-9 w-9 rounded-lg",
+  md: "h-11 w-11 rounded-lg",
+  lg: "h-14 w-14 rounded-xl",
+};
+
 export function GlossySquircleIcon({
   tone = "sky",
   size = "sm",
   icon,
   className,
 }: GlossySquircleIconProps) {
+  const isAntiSlop = useOptionalThemeContext()?.uiMode === "anti-slop";
+
+  if (isAntiSlop) {
+    return (
+      <span
+        aria-hidden="true"
+        className={cn(
+          "relative inline-flex shrink-0 items-center justify-center border",
+          ANTI_SLOP_TONE_CLASSES[tone],
+          ANTI_SLOP_SIZE_CLASSES[size],
+          className,
+        )}
+      >
+        {icon !== undefined && <span className="flex items-center">{icon}</span>}
+      </span>
+    );
+  }
+
   return (
     <span
       aria-hidden="true"
@@ -56,7 +90,6 @@ export function GlossySquircleIcon({
         className,
       )}
     >
-      {/* Lapisan kilap lengkung kaca */}
       <svg
         viewBox="0 0 64 64"
         className="pointer-events-none absolute inset-0 h-full w-full"

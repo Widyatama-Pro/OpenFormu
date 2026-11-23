@@ -13,6 +13,7 @@ describe("UI Enhancer (5 Palettes Stepper), Simplified Engine & Trakteer Integra
     window.localStorage.clear();
     document.documentElement.removeAttribute("data-theme");
     document.documentElement.removeAttribute("data-mode");
+    document.documentElement.removeAttribute("data-ui-mode");
     document.documentElement.removeAttribute("data-ui-enhancer");
     document.documentElement.removeAttribute("data-engine-mode");
     document.documentElement.removeAttribute("data-motion-engine");
@@ -23,7 +24,7 @@ describe("UI Enhancer (5 Palettes Stepper), Simplified Engine & Trakteer Integra
     vi.restoreAllMocks();
   });
 
-  it("mengaktifkan UI Enhancer secara default pada seluruh 5 palet warna via stepper & sakelar UI Enhancer", async () => {
+  it("mengaktifkan mode Enhanced secara default pada seluruh 5 palet dan menyediakan pemilih 3 mode (Biasa, Enhanced, Anti-Slop)", async () => {
     const user = userEvent.setup();
     const onUpdate = vi.fn();
 
@@ -34,6 +35,7 @@ describe("UI Enhancer (5 Palettes Stepper), Simplified Engine & Trakteer Integra
     );
 
     expect(OPENFORMU_PALETTE_CATALOG).toHaveLength(5);
+    expect(document.documentElement.getAttribute("data-ui-mode")).toBe("enhanced");
     expect(document.documentElement.getAttribute("data-ui-enhancer")).toBe("true");
     expect(document.documentElement.getAttribute("data-engine-mode")).toBe("ultra");
     expect(document.documentElement.getAttribute("data-motion-engine")).toBe("gpu_flip");
@@ -43,6 +45,7 @@ describe("UI Enhancer (5 Palettes Stepper), Simplified Engine & Trakteer Integra
     for (let i = 0; i < OPENFORMU_PALETTE_CATALOG.length; i++) {
       const current = document.documentElement.getAttribute("data-theme")!;
       seenPalettes.add(current);
+      expect(document.documentElement.getAttribute("data-ui-mode")).toBe("enhanced");
       expect(document.documentElement.getAttribute("data-ui-enhancer")).toBe("true");
       if (i < OPENFORMU_PALETTE_CATALOG.length - 1) {
         await user.click(nextBtn);
@@ -50,10 +53,58 @@ describe("UI Enhancer (5 Palettes Stepper), Simplified Engine & Trakteer Integra
     }
     expect(seenPalettes.size).toBe(5);
 
-    const enhancerSwitch = screen.getByRole("switch", { name: "UI Enhancer" });
-    await user.click(enhancerSwitch);
+    const radioGroup = screen.getByRole("radiogroup", { name: /Mode Tampilan Antarmuka/i });
+    expect(radioGroup).toBeInTheDocument();
+
+    const biasaRadio = screen.getByRole("radio", { name: /^Biasa/i });
+    const enhancedRadio = screen.getByRole("radio", { name: /^Enhanced/i });
+    const antiSlopRadio = screen.getByRole("radio", { name: /^Anti-Slop/i });
+
+    expect(enhancedRadio).toHaveAttribute("aria-checked", "true");
+    expect(biasaRadio).toHaveAttribute("aria-checked", "false");
+    expect(antiSlopRadio).toHaveAttribute("aria-checked", "false");
+
+    await user.click(biasaRadio);
+    expect(document.documentElement.getAttribute("data-ui-mode")).toBe("biasa");
     expect(document.documentElement.getAttribute("data-ui-enhancer")).toBe("false");
+    expect(window.localStorage.getItem(THEME_STORAGE_KEYS.uiMode)).toBe("biasa");
     expect(window.localStorage.getItem(THEME_STORAGE_KEYS.uiEnhancer)).toBe("false");
+    expect(onUpdate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ uiMode: "biasa", uiEnhancer: false }),
+    );
+
+    await user.click(antiSlopRadio);
+    expect(document.documentElement.getAttribute("data-ui-mode")).toBe("anti-slop");
+    expect(document.documentElement.getAttribute("data-ui-enhancer")).toBe("false");
+    expect(window.localStorage.getItem(THEME_STORAGE_KEYS.uiMode)).toBe("anti-slop");
+    expect(window.localStorage.getItem(THEME_STORAGE_KEYS.uiEnhancer)).toBe("false");
+    expect(onUpdate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ uiMode: "anti-slop", uiEnhancer: false }),
+    );
+    expect(document.querySelector(".lucide-sparkles")).toBeNull();
+
+    // Navigasi keyboard ArrowLeft / ArrowRight & Space/Enter pada radiogroup
+    antiSlopRadio.focus();
+    await user.keyboard("{ArrowRight}");
+    expect(document.documentElement.getAttribute("data-ui-mode")).toBe("biasa");
+    expect(document.activeElement).toBe(biasaRadio);
+
+    await user.keyboard("{ArrowRight}");
+    expect(document.documentElement.getAttribute("data-ui-mode")).toBe("enhanced");
+    expect(document.documentElement.getAttribute("data-ui-enhancer")).toBe("true");
+    expect(document.activeElement).toBe(enhancedRadio);
+
+    await user.keyboard("{ArrowLeft}");
+    expect(document.documentElement.getAttribute("data-ui-mode")).toBe("biasa");
+    expect(document.activeElement).toBe(biasaRadio);
+
+    antiSlopRadio.focus();
+    await user.keyboard(" ");
+    expect(document.documentElement.getAttribute("data-ui-mode")).toBe("anti-slop");
+
+    enhancedRadio.focus();
+    await user.keyboard("{Enter}");
+    expect(document.documentElement.getAttribute("data-ui-mode")).toBe("enhanced");
   });
 
   it("menyederhanakan Rendering & Motion Engine menjadi Smooth (120 FPS) dan Standard (Biasa)", async () => {
@@ -102,11 +153,12 @@ describe("UI Enhancer (5 Palettes Stepper), Simplified Engine & Trakteer Integra
     }
   });
 
-  it("memvalidasi opsi uiEnhancer, renderingEngine, motionEngine, glassBlurPx & glowIntensityPct di validateUserPreferences", () => {
+  it("memvalidasi opsi uiMode, uiEnhancer, renderingEngine, motionEngine, glassBlurPx & glowIntensityPct di validateUserPreferences", () => {
     const valid = validateUserPreferences({
       language: "id",
       theme: "light",
-      uiEnhancer: true,
+      uiMode: "anti-slop",
+      uiEnhancer: false,
       renderingEngine: "balanced",
       motionEngine: "gpu_flip",
       glassBlurPx: 16,
@@ -114,7 +166,8 @@ describe("UI Enhancer (5 Palettes Stepper), Simplified Engine & Trakteer Integra
     });
     expect(valid.ok).toBe(true);
     if (valid.ok) {
-      expect(valid.data.uiEnhancer).toBe(true);
+      expect(valid.data.uiMode).toBe("anti-slop");
+      expect(valid.data.uiEnhancer).toBe(false);
       expect(valid.data.renderingEngine).toBe("balanced");
       expect(valid.data.motionEngine).toBe("gpu_flip");
       expect(valid.data.glassBlurPx).toBe(16);
@@ -124,6 +177,7 @@ describe("UI Enhancer (5 Palettes Stepper), Simplified Engine & Trakteer Integra
     const clamped = validateUserPreferences({
       language: "en",
       theme: "dark",
+      uiMode: "__proto__",
       renderingEngine: "invalid",
       motionEngine: "invalid",
       glassBlurPx: 999,
@@ -131,6 +185,7 @@ describe("UI Enhancer (5 Palettes Stepper), Simplified Engine & Trakteer Integra
     });
     expect(clamped.ok).toBe(true);
     if (clamped.ok) {
+      expect(clamped.data.uiMode).toBeUndefined();
       expect(clamped.data.renderingEngine).toBeUndefined();
       expect(clamped.data.motionEngine).toBeUndefined();
       expect(clamped.data.glassBlurPx).toBeUndefined();

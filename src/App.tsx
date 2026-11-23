@@ -94,6 +94,7 @@ function AppContent() {
       themePalette: themeCtx.paletteId,
       themeModeSetting: nextResolved,
       amoledPureBlack: themeCtx.amoledPureBlack,
+      uiMode: themeCtx.uiMode,
       uiEnhancer: themeCtx.uiEnhancer,
       renderingEngine: themeCtx.renderingEngine,
       motionEngine: themeCtx.motionEngine,

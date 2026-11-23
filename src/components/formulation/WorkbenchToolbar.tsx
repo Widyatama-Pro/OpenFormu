@@ -31,9 +31,9 @@ import type { CommodityGroup } from "../../utils/species";
 import { AnimatedTextSwap } from "../ui/AnimatedText";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
-import { Input } from "../ui/Input";
 import { Switch } from "../ui/Switch";
 import { ThemedSelect, type ThemedSelectOption } from "../ui/ThemedSelect";
+import { NumericCellInput } from "./NumericCellInput";
 import { OptimizationModeSelector } from "./OptimizationModeSelector";
 
 export interface WorkbenchToolbarProps {
@@ -103,8 +103,7 @@ function groupOtherRequirements(requirements: readonly Requirement[]): OtherRequ
 
 /**
  * Pendaran gelombang kaca (Ambient Glassmorphism Refraction) di pojok kanan atas header
- * tanpa gambar ayam — memudar halus ke latar belakang dengan masking gradien
- * dan mewarisi tint warna palet aktif.
+ * memudar halus ke latar belakang dengan masking gradien dan tint warna palet aktif.
  */
 function HeroAmbientGlassBackdrop() {
   return (
@@ -222,8 +221,9 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
   onResetMock,
 }: WorkbenchToolbarProps) {
   const themeCtx = useOptionalThemeContext();
+  const isAntiSlop = themeCtx?.uiMode === "anti-slop";
   const uiEnhancer = themeCtx?.uiEnhancer ?? true;
-  const useGpuFlip = (themeCtx?.motionEngine ?? "gpu_flip") === "gpu_flip";
+  const useGpuFlip = !isAntiSlop && (themeCtx?.motionEngine ?? "gpu_flip") === "gpu_flip";
   const [prevActiveReq, setPrevActiveReq] = useState<Requirement>(activeRequirement);
   const [commodity, setCommodity] = useState<CommodityGroup>(() =>
     resolveInitialCommodity(activeRequirement),
@@ -454,14 +454,15 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
     >
       {uiEnhancer && <HeroAmbientGlassBackdrop />}
 
-      {/* Baris 1: Aksen Garis Vertikal Bercahaya + Judul + Aksi Kanan */}
       <div className="relative z-10 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
-        <div className="flex min-w-0 items-center justify-between gap-2 lg:contents">
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 lg:contents">
           <div className="flex min-w-0 flex-1 items-center gap-2.5 lg:order-1 lg:flex-none lg:shrink-0">
-            <span
-              aria-hidden="true"
-              className="h-6 w-1.5 shrink-0 rounded-full bg-gradient-to-b from-[var(--status-success)] via-[var(--color-accent)] to-[var(--color-primary)] shadow-[0_0_12px_var(--glow-primary-soft,rgba(16,185,129,0.4))] lg:h-7"
-            />
+            {!isAntiSlop && (
+              <span
+                aria-hidden="true"
+                className="h-6 w-1.5 shrink-0 rounded-full bg-gradient-to-b from-[var(--status-success)] via-[var(--color-accent)] to-[var(--color-primary)] shadow-[0_0_12px_var(--glow-primary-soft,rgba(16,185,129,0.4))] lg:h-7"
+              />
+            )}
             <div className="min-w-0">
               <h1 className="truncate text-[14px] font-extrabold tracking-tight text-[var(--text-primary)] sm:text-base lg:text-[20px] lg:leading-tight">
                 <span aria-hidden="true" className="sm:hidden">
@@ -476,15 +477,17 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
             </div>
           </div>
 
-          {/* Tombol Aksi Ringkas (di atas ilustrasi hero kanan atas) */}
           <div className="flex shrink-0 items-center gap-1.5 lg:order-3 lg:ml-auto">
             <Button
               variant="secondary"
               size="sm"
               onClick={onOpenExportDialog}
-              className="acrylic-control-capsule !min-h-8 gap-1.5 rounded-xl px-2.5 text-[11px] lg:!min-h-8 lg:px-3"
+              className={cn(
+                "min-h-11 gap-1.5 px-2.5 text-[11px] lg:min-h-8 lg:px-3",
+                !isAntiSlop && "acrylic-control-capsule rounded-xl",
+              )}
             >
-              <Download className="h-3.5 w-3.5 shrink-0" />
+              <Download className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               <span className="hidden sm:inline">
                 <AnimatedTextSwap text={pickLang(language, "Ekspor PDF", "Export PDF")} />
               </span>
@@ -494,29 +497,34 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
               variant="secondary"
               size="sm"
               onClick={onOpenSaveDialog}
-              className="acrylic-control-capsule !min-h-8 gap-1.5 rounded-xl px-2.5 text-[11px] lg:!min-h-8 lg:px-3"
+              className={cn(
+                "min-h-11 gap-1.5 px-2.5 text-[11px] lg:min-h-8 lg:px-3",
+                !isAntiSlop && "acrylic-control-capsule rounded-xl",
+              )}
             >
-              <BookmarkPlus className="h-3.5 w-3.5 shrink-0" />
+              <BookmarkPlus className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               <span>
                 <AnimatedTextSwap text={pickLang(language, "Simpan", "Save")} />
               </span>
             </Button>
             <Button
-              variant="ghost"
+              variant={isAntiSlop ? "secondary" : "ghost"}
               size="sm"
               onClick={onResetMock}
               aria-label={pickLang(language, "Reset data prototipe", "Reset sample data")}
               title={pickLang(language, "Reset ke data awal", "Reset to initial data")}
-              className="acrylic-control-capsule !min-h-8 w-8 rounded-xl px-0 lg:!min-h-8 lg:w-8"
+              className={cn(
+                "min-h-11 w-11 px-0 lg:min-h-8 lg:w-8",
+                !isAntiSlop && "acrylic-control-capsule rounded-xl",
+              )}
             >
-              <RotateCcw className="h-3.5 w-3.5 shrink-0" />
+              <RotateCcw className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             </Button>
 
-            {/* Tombol Lipat / Buka Kontrol di Mobile (< lg) */}
             {onToggleMobileCollapsed && (
               <span className="inline-flex lg:hidden">
                 <Button
-                  variant="ghost"
+                  variant={isAntiSlop ? "secondary" : "ghost"}
                   size="sm"
                   onClick={onToggleMobileCollapsed}
                   aria-expanded={!mobileCollapsed}
@@ -533,12 +541,15 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
                           "Collapse livestock controls",
                         )
                   }
-                  className="acrylic-control-capsule !min-h-8 w-8 rounded-xl px-0 text-[10px]"
+                  className={cn(
+                    "min-h-11 w-11 px-0 text-[10px]",
+                    !isAntiSlop && "acrylic-control-capsule rounded-xl",
+                  )}
                 >
                   {mobileCollapsed ? (
-                    <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+                    <ChevronDown className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                   ) : (
-                    <ChevronUp className="h-3.5 w-3.5 shrink-0" />
+                    <ChevronUp className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                   )}
                 </Button>
               </span>
@@ -576,7 +587,11 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
                         "Show nutrient targets panel",
                       )
                 }
-                className="!min-h-8 rounded-xl px-3 text-[11px] shadow-[0_6px_20px_-4px_var(--glow-primary-soft,rgba(16,185,129,0.38))]"
+                className={cn(
+                  "lg:min-h-8 px-3 text-[11px]",
+                  !isAntiSlop &&
+                    "rounded-xl shadow-[0_6px_20px_-4px_var(--glow-primary-soft,rgba(16,185,129,0.38))]",
+                )}
               >
                 {inspectorOpen ? (
                   <>
@@ -608,8 +623,14 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
           mobileCollapsed && "hidden lg:flex",
         )}
       >
-        {/* Kapsul Kiri: Standar Ternak + As-Fed / BK (DM) */}
-        <div className="acrylic-control-capsule flex min-w-0 flex-col gap-1.5 rounded-2xl p-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:px-2.5">
+        <div
+          className={cn(
+            "flex min-w-0 flex-col gap-1.5 p-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:px-2.5",
+            isAntiSlop
+              ? "rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]"
+              : "acrylic-control-capsule rounded-2xl",
+          )}
+        >
           <div className="flex min-w-0 items-center gap-1.5">
             <label
               htmlFor="commodity-select"
@@ -635,12 +656,14 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
                 language={language}
                 popoverMinWidthPx={210}
                 onChange={(v) => handleCommodityChange(v as CommodityGroup)}
-                className="h-8 min-h-8 rounded-xl py-0 text-[11px] font-semibold md:h-7 md:min-h-7"
+                className={cn(
+                  "min-h-11 py-0 text-[11px] font-semibold md:h-7 md:min-h-7",
+                  !isAntiSlop && "rounded-xl",
+                )}
               />
             </div>
           </div>
 
-          {/* 1. Ayam Pedaging -> per fase */}
           {commodity === "broiler" && (
             <div className="min-w-0 w-full sm:w-64">
               <ThemedSelect
@@ -666,12 +689,11 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
                 language={language}
                 popoverMinWidthPx={310}
                 onChange={onSelectPreset}
-                className="h-8 min-h-8 py-0 text-[11px] md:h-7 md:min-h-7"
+                className="min-h-11 py-0 text-[11px] md:h-7 md:min-h-7"
               />
             </div>
           )}
 
-          {/* 2. Ayam Petelur -> tiap fase pilihan */}
           {commodity === "layer" && (
             <div className="min-w-0 w-full sm:w-68">
               <ThemedSelect
@@ -697,12 +719,11 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
                 language={language}
                 popoverMinWidthPx={320}
                 onChange={onSelectPreset}
-                className="h-8 min-h-8 py-0 text-[11px] md:h-7 md:min-h-7"
+                className="min-h-11 py-0 text-[11px] md:h-7 md:min-h-7"
               />
             </div>
           )}
 
-          {/* 3. Sapi Potong -> Status + Bobot Badan + Target PBBH */}
           {commodity === "cattle_beef" && (
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               <div className="min-w-0 flex-1 sm:w-44 sm:flex-none">
@@ -718,29 +739,30 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
                   language={language}
                   popoverMinWidthPx={220}
                   onChange={(v) => applyBeefUpdate(beefBw, beefAdg, v as BeefPhysiologicalState)}
-                  className="h-8 min-h-8 py-0 text-[11px] md:h-7 md:min-h-7"
+                  className="min-h-11 py-0 text-[11px] md:h-7 md:min-h-7"
                 />
               </div>
 
               <label className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--text-secondary)]">
                 <span>{pickLang(language, "BB", "BW")}</span>
-                <Input
-                  numeric
-                  type="number"
+                <NumericCellInput
+                  value={beefBw}
                   min={80}
                   max={900}
-                  step={10}
-                  value={beefBw}
-                  aria-label={pickLang(
+                  fractionDigits={0}
+                  fallbackOnEmpty={beefBw}
+                  commitOnChange
+                  ariaLabel={pickLang(
                     language,
                     "Bobot badan sapi potong kg",
                     "Beef body weight kg",
                   )}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    if (Number.isFinite(v) && v > 0) applyBeefUpdate(v, beefAdg, beefState);
+                  onCommit={(v) => {
+                    if (v !== null && Number.isFinite(v) && v > 0) {
+                      applyBeefUpdate(v, beefAdg, beefState);
+                    }
                   }}
-                  className="h-7 min-h-7 w-16 px-1.5 py-0 text-[11px] md:min-h-7"
+                  className="min-h-11 w-16 px-1.5 py-0 text-[11px] md:h-7 md:min-h-7"
                 />
                 <span>kg</span>
               </label>
@@ -748,19 +770,20 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
               {beefState === "growth" && (
                 <label className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--text-secondary)]">
                   <span>{pickLang(language, "PBBH", "ADG")}</span>
-                  <Input
-                    numeric
-                    type="number"
+                  <NumericCellInput
+                    value={beefAdg}
                     min={0}
                     max={1.5}
-                    step={0.05}
-                    value={beefAdg}
-                    aria-label={pickLang(language, "Target PBBH kg per hari", "Target ADG kg/day")}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      if (Number.isFinite(v) && v >= 0) applyBeefUpdate(beefBw, v, beefState);
+                    fractionDigits={2}
+                    fallbackOnEmpty={beefAdg}
+                    commitOnChange
+                    ariaLabel={pickLang(language, "Target PBBH kg per hari", "Target ADG kg/day")}
+                    onCommit={(v) => {
+                      if (v !== null && Number.isFinite(v) && v >= 0) {
+                        applyBeefUpdate(beefBw, v, beefState);
+                      }
                     }}
-                    className="h-7 min-h-7 w-16 px-1.5 py-0 text-[11px] md:min-h-7"
+                    className="min-h-11 w-16 px-1.5 py-0 text-[11px] md:h-7 md:min-h-7"
                   />
                   <span>kg/hr</span>
                 </label>
@@ -778,30 +801,28 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
             </div>
           )}
 
-          {/* 4. Sapi Perah -> Bobot + Target Susu + Lemak */}
           {commodity === "cattle_dairy" && (
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               <label className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--text-secondary)]">
                 <span>{pickLang(language, "BB", "BW")}</span>
-                <Input
-                  numeric
-                  type="number"
+                <NumericCellInput
+                  value={dairyBw}
                   min={200}
                   max={900}
-                  step={10}
-                  value={dairyBw}
-                  aria-label={pickLang(
+                  fractionDigits={0}
+                  fallbackOnEmpty={dairyBw}
+                  commitOnChange
+                  ariaLabel={pickLang(
                     language,
                     "Bobot badan sapi perah kg",
                     "Dairy body weight kg",
                   )}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    if (Number.isFinite(v) && v > 0) {
+                  onCommit={(v) => {
+                    if (v !== null && Number.isFinite(v) && v > 0) {
                       applyDairyUpdate(v, dairyMilk, dairyFat, dairyStandard, dairyDry);
                     }
                   }}
-                  className="h-7 min-h-7 w-16 px-1.5 py-0 text-[11px] md:min-h-7"
+                  className="min-h-11 w-16 px-1.5 py-0 text-[11px] md:h-7 md:min-h-7"
                 />
                 <span>kg</span>
               </label>
@@ -810,46 +831,44 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
                 <>
                   <label className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--text-secondary)]">
                     <span>{pickLang(language, "Susu", "Milk")}</span>
-                    <Input
-                      numeric
-                      type="number"
-                      min={1}
-                      max={65}
-                      step={1}
+                    <NumericCellInput
                       value={dairyMilk}
-                      aria-label={pickLang(
+                      min={0}
+                      max={65}
+                      fractionDigits={1}
+                      fallbackOnEmpty={dairyMilk}
+                      commitOnChange
+                      ariaLabel={pickLang(
                         language,
                         "Target produksi susu liter per hari",
                         "Milk yield L/day",
                       )}
-                      onChange={(e) => {
-                        const v = Number(e.target.value);
-                        if (Number.isFinite(v) && v >= 0) {
+                      onCommit={(v) => {
+                        if (v !== null && Number.isFinite(v) && v >= 0) {
                           applyDairyUpdate(dairyBw, v, dairyFat, dairyStandard, dairyDry);
                         }
                       }}
-                      className="h-7 min-h-7 w-14 px-1.5 py-0 text-[11px] md:min-h-7"
+                      className="min-h-11 w-14 px-1.5 py-0 text-[11px] md:h-7 md:min-h-7"
                     />
                     <span>L</span>
                   </label>
 
                   <label className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--text-secondary)]">
                     <span>{pickLang(language, "Lemak", "Fat")}</span>
-                    <Input
-                      numeric
-                      type="number"
+                    <NumericCellInput
+                      value={dairyFat}
                       min={2.5}
                       max={6.0}
-                      step={0.1}
-                      value={dairyFat}
-                      aria-label={pickLang(language, "Kadar lemak susu persen", "Milk fat %")}
-                      onChange={(e) => {
-                        const v = Number(e.target.value);
-                        if (Number.isFinite(v) && v > 0) {
+                      fractionDigits={1}
+                      fallbackOnEmpty={dairyFat}
+                      commitOnChange
+                      ariaLabel={pickLang(language, "Kadar lemak susu persen", "Milk fat %")}
+                      onCommit={(v) => {
+                        if (v !== null && Number.isFinite(v) && v > 0) {
                           applyDairyUpdate(dairyBw, dairyMilk, v, dairyStandard, dairyDry);
                         }
                       }}
-                      className="h-7 min-h-7 w-14 px-1.5 py-0 text-[11px] md:min-h-7"
+                      className="min-h-11 w-14 px-1.5 py-0 text-[11px] md:h-7 md:min-h-7"
                     />
                     <span>%</span>
                   </label>
@@ -859,7 +878,12 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
               <div
                 role="group"
                 aria-label={pickLang(language, "Standar referensi sapi perah", "Dairy standard")}
-                className="neu-pressed inline-flex h-7 items-center rounded-lg p-0.5"
+                className={cn(
+                  "inline-flex min-h-11 items-center rounded-lg p-0.5 md:min-h-7",
+                  isAntiSlop
+                    ? "border border-[var(--border-subtle)] bg-[var(--bg-sunken)]"
+                    : "neu-pressed",
+                )}
               >
                 {(
                   [
@@ -873,9 +897,11 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
                     aria-pressed={dairyStandard === std.id}
                     onClick={() => applyDairyUpdate(dairyBw, dairyMilk, dairyFat, std.id, dairyDry)}
                     className={cn(
-                      "cursor-pointer rounded-md px-2 py-0.5 text-[10px] font-semibold transition-colors",
+                      "min-h-11 cursor-pointer rounded-md px-2.5 py-1 text-[10px] font-semibold transition-colors md:min-h-6 md:px-2 md:py-0.5",
                       dairyStandard === std.id
-                        ? "bg-[var(--bg-surface-elevated)] text-[var(--text-primary)] shadow-[var(--shadow-neu-flat)]"
+                        ? isAntiSlop
+                          ? "border border-[var(--color-primary)] bg-[var(--bg-surface-elevated)] text-[var(--text-primary)]"
+                          : "bg-[var(--bg-surface-elevated)] text-[var(--text-primary)] shadow-[var(--shadow-neu-flat)]"
                         : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                     )}
                   >
@@ -884,7 +910,7 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
                 ))}
               </div>
 
-              <label className="inline-flex cursor-pointer items-center gap-1 text-[11px] font-medium text-[var(--text-secondary)]">
+              <label className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 px-1 text-[11px] font-medium text-[var(--text-secondary)] md:min-h-0">
                 <input
                   type="checkbox"
                   checked={dairyDry}
@@ -909,7 +935,6 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
             </div>
           )}
 
-          {/* 5. Lainnya -> ThemedSelect searchable + section dividers tanpa radio pada header grup */}
           {commodity === "other" && (
             <div className="min-w-0 w-full sm:w-72">
               <ThemedSelect
@@ -927,11 +952,10 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
                 language={language}
                 popoverMinWidthPx={340}
                 onChange={onSelectPreset}
-                className="h-8 min-h-8 py-0 text-[11px] md:h-7 md:min-h-7"
+                className="min-h-11 py-0 text-[11px] md:h-7 md:min-h-7"
               />
             </div>
           )}
-          {/* Toggle Basis As-Fed / BK (DM) dengan 120 FPS GPU sliding pill */}
           <div
             role="group"
             aria-label={pickLang(
@@ -939,7 +963,12 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
               "Pilih basis As-Fed atau Bahan Kering",
               "Select As-Fed or Dry Matter basis",
             )}
-            className="inline-flex h-7 shrink-0 items-center rounded-xl border border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--bg-sunken)]/70 p-0.5"
+            className={cn(
+              "inline-flex min-h-11 shrink-0 items-center p-0.5 md:min-h-7",
+              isAntiSlop
+                ? "rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-sunken)]"
+                : "rounded-xl border border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--bg-sunken)]/70",
+            )}
           >
             {(["as_fed", "dry_matter"] as const).map((basis) => {
               const active = config.activeBasis === basis;
@@ -950,9 +979,12 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
                   aria-pressed={active}
                   onClick={() => onSetBasis(basis)}
                   className={cn(
-                    "elastic-size-box relative cursor-pointer rounded-lg px-2.5 py-0.5 text-[11px] font-semibold whitespace-nowrap transition-[transform,color] duration-150 active:scale-[0.97] motion-reduce:transform-none",
+                    "relative inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-md px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap transition-[transform,color] duration-150 sm:min-w-0 md:min-h-6 md:py-0.5 motion-reduce:transform-none",
+                    !isAntiSlop && "elastic-size-box rounded-lg active:scale-[0.97]",
                     active
-                      ? "text-[var(--status-success)]"
+                      ? isAntiSlop
+                        ? "text-[var(--text-primary)]"
+                        : "text-[var(--status-success)]"
                       : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                   )}
                 >
@@ -967,7 +999,12 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
                     ) : (
                       <span
                         aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 rounded-lg bg-[var(--bg-surface-elevated)] shadow-[var(--shadow-neu-flat)]"
+                        className={cn(
+                          "pointer-events-none absolute inset-0",
+                          isAntiSlop
+                            ? "rounded-md border border-[var(--color-primary)] bg-[var(--bg-surface-elevated)]"
+                            : "rounded-lg bg-[var(--bg-surface-elevated)] shadow-[var(--shadow-neu-flat)]",
+                        )}
                       />
                     ))}
                   <span className="relative z-10">
@@ -990,8 +1027,14 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
           </div>
         </div>
 
-        {/* Kapsul Kanan: Mode Optimasi + KPI Biaya & Status + Toleransi Target */}
-        <div className="acrylic-control-capsule flex flex-wrap items-center gap-2 rounded-2xl p-1.5 sm:px-3">
+        <div
+          className={cn(
+            "flex flex-wrap items-center gap-2 p-1.5 sm:px-3",
+            isAntiSlop
+              ? "rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]"
+              : "acrylic-control-capsule rounded-2xl",
+          )}
+        >
           <div className="flex min-w-[122px] flex-1 items-center gap-1.5 sm:flex-none">
             <span className="hidden shrink-0 text-[11px] font-semibold whitespace-nowrap text-[var(--text-secondary)] sm:inline">
               Mode
@@ -1005,7 +1048,7 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 border-l border-[var(--border-subtle)] pl-2.5">
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 sm:border-l sm:border-[var(--border-subtle)] sm:pl-2.5">
             <div className="flex shrink-0 items-baseline gap-1 whitespace-nowrap">
               <span className="text-[10px] font-medium text-[var(--text-muted)] lg:text-[11px]">
                 <span aria-hidden="true" className="sm:hidden">
@@ -1017,11 +1060,15 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
                 </span>
               </span>
               <span className="text-[11px] font-bold tabular-nums text-[var(--status-warning)] sm:text-xs lg:text-sm">
-                {result.costPerKg !== null ? formatCurrencyIdr(result.costPerKg) : "—"}
+                {result.costPerKg !== null
+                  ? formatCurrencyIdr(result.costPerKg)
+                  : isAntiSlop
+                    ? "-"
+                    : "—"}
               </span>
             </div>
 
-            <div className="flex shrink-0 items-baseline gap-1 border-l border-[var(--border-subtle)] pl-2.5 whitespace-nowrap">
+            <div className="flex shrink-0 items-baseline gap-1 whitespace-nowrap sm:border-l sm:border-[var(--border-subtle)] sm:pl-2.5">
               <span className="text-[10px] font-medium text-[var(--text-muted)] lg:text-[11px]">
                 <span aria-hidden="true" className="sm:hidden">
                   /{config.batchSizeKg}kg
@@ -1033,11 +1080,13 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
               <span className="text-[11px] font-bold tabular-nums text-[var(--status-success)] sm:text-xs lg:text-sm">
                 {result.batchTotalCost !== null && result.batchTotalCost !== undefined
                   ? formatCurrencyIdr(result.batchTotalCost)
-                  : "—"}
+                  : isAntiSlop
+                    ? "-"
+                    : "—"}
               </span>
             </div>
 
-            <div className="flex shrink-0 items-center gap-2 border-l border-[var(--border-subtle)] pl-2.5">
+            <div className="flex shrink-0 items-center gap-2 sm:border-l sm:border-[var(--border-subtle)] sm:pl-2.5">
               {statusBadge}
               <label
                 title={pickLang(

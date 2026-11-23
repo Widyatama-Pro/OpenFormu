@@ -21,14 +21,15 @@
 ## Core Capabilities
 
 - **Exact Client-Side LP & Goal Programming (`HiGHS` WASM):** Compiles decision variables $x_i \in [0, 1]$ ($\sum x_i = 1$) in pure `As-Fed` or `Dry Matter (BK)` basis after automatic normalization, running off the main thread with stale-ticket cancellation and `1e-6` post-solve mathematical verification against manual nutrient recalculation. Supports **Modes 1–5** (pure Least-Cost through High-Precision Chebyshev minimax deviation) as well as **Range (Min–Max)** and **Single-Target Approach** constraints.
-- **Built-In Local Nutrition Libraries & Dynamic Cattle Calculators:** Ships with sourced feed composition data (**304** Hartadi 1980 feeds with Table 12/13/14 merges and 44 mineral supplements), **22** SNI poultry & ruminant standards, **82** Kearl (1982) Table 14 beef/working/gestation profiles, **24** NRC (1988) dairy profiles, plus dynamic **Beef Cattle (Kearl 1982)** and **Dairy Cattle (Kearl 1982 / NRC 1988)** piecewise interpolation & extrapolation calculators (computing DMI, 4% FCM, `CP`, `TDN`, `EE`, `CF`, `Ca`, and `P` with step-by-step transparent breakdown).
+- **Built-In Local Nutrition Libraries & Dynamic Cattle Calculators:** Ships with sourced feed composition data (**344** calibrated feeds in `HARTADI_FEEDS` combining Hartadi et al. 1980 Tables 12–15, Kearl 1982 Tables 26/27/32 tropical feeds, and NRC 1994 Tables 9-1/9-2/9-6/9-7/9-9/9-10 poultry feeds with 0 duplicate IFNs and derived `SID Lys`, `AvP`, `Na`, `K`, `Cl`, `S`, `NDF`, `ADF`), **22** SNI poultry & ruminant standards, **17** NRC (1994) 9th Revised Edition poultry requirements (Broiler, Layer, Breeder, Turkey, Pekin Duck, Japanese Quail, Geese), **98** Kearl (1982) ruminant profiles (Table 14 Cattle, Table 11 Sheep, Table 12 Goats, Table 16 Domestic Buffaloes), **24** NRC (1988) dairy profiles, plus dynamic **Beef Cattle (Kearl 1982)** and **Dairy Cattle (Kearl 1982 / NRC 1988)** piecewise interpolation & extrapolation calculators (computing DMI, 4% FCM, `CP`, `TDN`, `EE`, `CF`, `Ca`, and `P` with step-by-step transparent breakdown).
 - **Industrial-Grade Precision & Conflict Diagnostics:**
   - **`PR-01` Minimal IIS & Priority Tiers:** Chinneck Deletion Filter isolates exact conflicting nutrient, ratio (`Ca:P`), or ingredient-group constraints across tiers (`tier0` hard to `tier3` soft), with farmer-friendly `Toleransi Target` ($\ell_1$ relaxation) guarded by an asymmetric **Crude Fiber (`cf`) hard ceiling of `+15%` above `max` (`max * 1.15`)**.
   - **`PR-02` Sensitivity, Bound Duals & Price Ladder:** Extracts `shadowPrice` (including directional degenerate duals), `opportunityCosts` for unused feeds, inclusion bound duals, and parametric Critical-Region price stepping (`computeCriticalRegionStepping`).
   - **`PR-03` Fractional Objective & `dEB/DCAD`:** Charnes–Cooper / Dinkelbach iteration minimizing `Cost / Nutrient` (e.g. IDR per Mcal ME) alongside active dietary electrolyte balance calculations.
   - **`PR-04` Stochastic SLP (Munford):** Accounts for ingredient nutrient variance ($\sigma$) using Gaussian quantiles $\Phi^{-1}(p)$ or distribution-free Cantelli bounds.
   - **`PR-05` Sub-Additive Multi-Enzymes & Algebraic Rumen Evaluator:** Models phytase/xylanase/protease uplift bounded by substrate availability (`phytateP`) with thermal pelleting retention, plus CNCPS v6.5 / NASEM 2021 ruminal passage, microbial protein, `peuNDF240`, `eCH4`, and acidosis risk estimation.
-- **Data Exchange & Offline Storage:** Multi-cell TSV paste from spreadsheets, CSV partial-merge without wiping missing columns, OOXML `.xlsx` multi-sheet workbooks, PDF 1.4 formulation/batch/database reports (with batch safety gating if infeasible), portable `.feed.json` transfer, custom user-defined nutrients, and bilingual (`ID / EN`) domain messages.
+- **Data Exchange, Dual-Precision Results & Offline Storage:** Multi-cell TSV paste from spreadsheets, CSV partial-merge without wiping missing columns, 4-sheet OOXML `.xlsx` formulation workbooks (including full 25-nutrient ingredient matrix, daily consumption BK & As-Fed, and dual batch weights `xx,xxx kg` vs rounded) + 2-sheet `.xlsx` full ingredient database export, PDF 1.4 formulation/batch/database reports with formal institutional `Head Kop` & 3-column verification `Tail Kop`, interactive **Daily Consumption (BK & As-Fed kg/head/day)** estimator & 2-version result precision (`xx,xxx` vs rounded) in the Results tab, draft-buffered numeric inputs (allowing empty field editing and `0.00x` micro-bounds without forced `0`), expandable `Nama Bahan` column on Android/mobile (`↔` toggle & touch drag), portable `.feed.json` transfer, custom user-defined nutrients, and bilingual (`ID / EN`) domain messages.
+- **Three-Mode Display System (`Biasa`, `Enhanced`, `Anti-Slop`):** Configurable in Theme Settings (`ThemeSwitcherMenu.tsx`, `src/theme/use-theme.ts`) across **5 curated palettes × Light / Dark (+ AMOLED Pure Black)** with pre-paint hydration (`index.html`, key `openformu-ui-mode` with legacy `openformul-ui-mode`, `openformu-theme-enhancer`, and `openformul-theme-enhancer` migration) and `Enhanced` as default. **`Anti-Slop`** (`[data-ui-mode="anti-slop"]` in `src/theme/anti-slop.css`) delivers WCAG AA calibrated surfaces (`>= 4.5:1` text, `>= 3.0:1` UI boundaries), flat tabular field-ledger hierarchy, `>= 44x44px` mobile touch targets, `SheetDialog` focus trapping, and explicit Empty/Loading/Error states while keeping `Biasa` and `Enhanced` visually and functionally intact.
 
 ---
 
@@ -83,6 +84,8 @@ npm test -- --run
 npm run build
 ```
 
+> Note: `npm run format:check` runs `prettier --check .` (if third-party `.agents/` skill files are unignored, verify project files with `npx prettier --check README.md docs/ AGENTS.md index.html "src/**/*.{ts,tsx,css}" "tests/**/*.{ts,tsx}" "e2e/**/*.mjs"`). The 98-case opaque-box Playwright E2E suite lives in `e2e/` (`node e2e/run-e2e.mjs --tier=all`; the suite is ready via `e2e/run-e2e.mjs`, and full Tiers 1–4 execution plus Tier 5 hardening are scheduled in the Final Milestone).
+
 ---
 
 ## Documentation & License
@@ -91,6 +94,7 @@ npm run build
 - [Formulation Mathematics](docs/formulation-math.md)
 - [Data Schema](docs/data-schema.md)
 - [Roadmap](docs/ROADMAP.md)
+- [Anti-Slop Design Direction & Delivery Gate](docs/anti-slop-design-direction.md)
 - [Contributing Guide](CONTRIBUTING.md) · [Security Policy](SECURITY.md)
 
 Licensed under the [MIT License](LICENSE).

@@ -1,3 +1,4 @@
+import { useOptionalThemeContext } from "../../theme";
 import { cn } from "../../utils/cn";
 
 export interface ProgressNode {
@@ -43,11 +44,17 @@ export function NeumorphicProgressTrack({
   showThumb = false,
   className,
 }: NeumorphicProgressTrackProps) {
+  const isAntiSlop = useOptionalThemeContext()?.uiMode === "anti-slop";
   const clamped = Math.max(0, Math.min(100, percent));
 
   return (
     <div className={cn("relative flex items-center", className)}>
-      <div className="neu-well relative h-2.5 w-full overflow-hidden rounded-full">
+      <div
+        className={cn(
+          "relative h-2.5 w-full overflow-hidden rounded-full",
+          isAntiSlop ? "border border-[var(--border-strong)] bg-[var(--bg-sunken)]" : "neu-well",
+        )}
+      >
         {rangeStartPct !== undefined && rangeWidthPct !== undefined ? (
           <div
             className="absolute top-0 bottom-0 rounded-full"
@@ -72,7 +79,8 @@ export function NeumorphicProgressTrack({
         <span
           aria-hidden="true"
           className={cn(
-            "absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--bg-surface-elevated)] shadow-sm",
+            "absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--bg-surface-elevated)]",
+            !isAntiSlop && "shadow-sm",
             FILL_CLASSES[tone],
           )}
           style={{ left: `${clamped}%` }}
@@ -85,8 +93,11 @@ export function NeumorphicProgressTrack({
             <span
               key={`${node.label}-${idx}`}
               className={cn(
-                "inline-flex h-5 min-w-5 items-center justify-center rounded-full border-2 bg-[var(--bg-surface-elevated)] px-1 text-[10px] font-bold tabular-nums shadow-xs",
-                NODE_RING_CLASSES[node.tone ?? "neutral"],
+                "inline-flex h-5 min-w-5 items-center justify-center rounded-full border-2 bg-[var(--bg-surface-elevated)] px-1 text-[10px] font-bold tabular-nums",
+                !isAntiSlop && "shadow-xs",
+                isAntiSlop && (node.tone ?? "neutral") === "neutral"
+                  ? "border-[var(--border-strong)] text-[var(--text-secondary)]"
+                  : NODE_RING_CLASSES[node.tone ?? "neutral"],
               )}
             >
               {node.label}

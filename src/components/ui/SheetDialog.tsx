@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { X } from "lucide-react";
+import { useOptionalThemeContext } from "../../theme";
 import { cn } from "../../utils/cn";
 
 export interface SheetDialogProps {
@@ -13,9 +14,38 @@ export interface SheetDialogProps {
   readonly variant?: "bottom-sheet" | "dialog" | "responsive";
 }
 
-/** Dialog adaptif Tactile Neumorphism tanpa backdrop blur agar tetap 60fps. */
-export function SheetDialog({
-  open,
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+const openDialogStack: string[] = [];
+
+function captureActiveElement(): HTMLElement | null {
+  if (typeof document === "undefined") return null;
+  return document.activeElement instanceof HTMLElement ? document.activeElement : null;
+}
+
+function hasActiveExternalOverlay(): boolean {
+  if (typeof document === "undefined") return false;
+  if (document.querySelector('[data-themed-select-overlay="true"]') !== null) return true;
+  return (
+    document.querySelector('[role="dialog"][aria-modal="true"]:not([data-sheet-dialog="true"])') !==
+    null
+  );
+}
+
+function getDialogFocusables(container: HTMLElement): HTMLElement[] {
+  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+    (el) => !el.closest('[hidden], [aria-hidden="true"]'),
+  );
+}
+
+/** Adaptive modal/sheet dialog with Escape close, Tab focus trap, and trigger focus restoration. */
+export function SheetDialog(props: SheetDialogProps) {
+  if (!props.open) return null;
+  return <SheetDialogImpl {...props} />;
+}
+
+function SheetDialogImpl({
   onClose,
   title,
   subtitle,
@@ -23,16 +53,79 @@ export function SheetDialog({
   footer,
   variant = "responsive",
 }: SheetDialogProps) {
-  useEffect(() => {
-    if (!open) return;
-    const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [open, onClose]);
+  const isAntiSlop = useOptionalThemeContext()?.uiMode === "anti-slop";
+  const dialogId = useId();
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  // Capture trigger pre-commit so autoFocus children do not overwrite the return target.
+  const [returnTarget] = useState<HTMLElement | null>(captureActiveElement);
+  const onCloseRef = useRef(onClose);
 
-  if (!open) return null;
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    openDialogStack.push(dialogId);
+
+    const panel = panelRef.current;
+    if (panel && !panel.contains(document.activeElement)) {
+      const focusables = getDialogFocusables(panel);
+      const target = focusables[0] ?? panel;
+      target.focus();
+    }
+
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+      if (openDialogStack[openDialogStack.length - 1] !== dialogId) return;
+
+      if (event.key === "Escape") {
+        if (hasActiveExternalOverlay()) return;
+        event.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== "Tab" || !panelRef.current) return;
+
+      const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      if (
+        document.querySelector('[data-themed-select-overlay="true"][role="dialog"]') !== null ||
+        active?.closest('[data-themed-select-overlay="true"]') != null
+      ) {
+        return;
+      }
+
+      const focusables = getDialogFocusables(panelRef.current);
+      if (focusables.length === 0) {
+        event.preventDefault();
+        panelRef.current.focus();
+        return;
+      }
+
+      const first = focusables[0]!;
+      const last = focusables[focusables.length - 1]!;
+
+      if (event.shiftKey) {
+        if (!active || active === first || !panelRef.current.contains(active)) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else if (!active || active === last || !panelRef.current.contains(active)) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener("keydown", handleKey);
+    return () => {
+      window.removeEventListener("keydown", handleKey);
+      const idx = openDialogStack.lastIndexOf(dialogId);
+      if (idx !== -1) openDialogStack.splice(idx, 1);
+      // Skip focus return during StrictMode simulated cleanup while the panel stays mounted.
+      if (!panel?.isConnected && returnTarget && returnTarget.isConnected) {
+        returnTarget.focus();
+      }
+    };
+  }, [dialogId, returnTarget]);
 
   const containerMode =
     variant === "bottom-sheet"
@@ -41,8 +134,13 @@ export function SheetDialog({
         ? "items-center justify-center p-4"
         : "items-end justify-center p-0 md:items-center md:p-4";
 
-  const panelRadius =
-    variant === "bottom-sheet"
+  const panelRadius = isAntiSlop
+    ? variant === "bottom-sheet"
+      ? "rounded-t-xl max-h-[90dvh]"
+      : variant === "dialog"
+        ? "rounded-xl max-w-2xl max-h-[85dvh]"
+        : "rounded-t-xl max-h-[90dvh] md:max-w-2xl md:rounded-xl md:max-h-[85dvh]"
+    : variant === "bottom-sheet"
       ? "rounded-t-2xl max-h-[90dvh]"
       : variant === "dialog"
         ? "rounded-2xl max-w-2xl max-h-[85dvh]"
@@ -50,15 +148,24 @@ export function SheetDialog({
 
   return (
     <div
+      data-sheet-dialog="true"
       className={cn("safe-area-dialog-backdrop fixed inset-0 z-50 flex bg-black/50", containerMode)}
       role="dialog"
       aria-modal="true"
       aria-label={title}
-      onClick={onClose}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClose();
+      }}
     >
       <div
+        ref={panelRef}
+        tabIndex={-1}
         className={cn(
-          "landscape-dialog-panel flex w-full flex-col overflow-hidden overscroll-contain border border-[var(--border-subtle)] bg-[var(--bg-surface-elevated)] text-[var(--text-primary)] shadow-[0_24px_54px_-14px_rgba(0,0,0,0.34),0_4px_16px_-4px_rgba(0,0,0,0.14)]",
+          "landscape-dialog-panel flex w-full flex-col overflow-hidden overscroll-contain border bg-[var(--bg-surface-elevated)] text-[var(--text-primary)] focus:outline-none",
+          isAntiSlop
+            ? "border-[var(--border-strong)] shadow-[0_12px_32px_-8px_rgba(0,0,0,0.28)]"
+            : "border-[var(--border-subtle)] shadow-[0_24px_54px_-14px_rgba(0,0,0,0.34),0_4px_16px_-4px_rgba(0,0,0,0.14)]",
           panelRadius,
         )}
         onClick={(event) => event.stopPropagation()}
@@ -76,9 +183,14 @@ export function SheetDialog({
             type="button"
             onClick={onClose}
             aria-label="Tutup panel"
-            className="neu-pill-btn inline-flex min-h-10 min-w-10 cursor-pointer items-center justify-center rounded-full text-[var(--text-secondary)] md:min-h-8 md:min-w-8"
+            className={cn(
+              "inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]",
+              isAntiSlop
+                ? "rounded-lg border border-[var(--border-strong)] bg-[var(--bg-surface)] text-[var(--text-primary)] hover:bg-[var(--bg-sunken)]"
+                : "neu-pill-btn rounded-full text-[var(--text-secondary)] md:min-h-8 md:min-w-8",
+            )}
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
 

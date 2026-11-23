@@ -13,7 +13,8 @@ export interface AnimatedTextSwapProps {
  */
 export function AnimatedTextSwap({ text, className }: AnimatedTextSwapProps) {
   const themeCtx = useOptionalThemeContext();
-  const useGpuFlip = (themeCtx?.motionEngine ?? "gpu_flip") === "gpu_flip";
+  const useGpuFlip =
+    themeCtx?.uiMode !== "anti-slop" && (themeCtx?.motionEngine ?? "gpu_flip") === "gpu_flip";
 
   return (
     <span

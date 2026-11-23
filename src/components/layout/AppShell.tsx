@@ -64,12 +64,7 @@ function resolveDefaultSidebarExpanded(): boolean {
   return true;
 }
 
-/**
- * Kerangka aplikasi OpenFormu:
- * - Intro reveal dari titik logo pojok kiri atas dalam 380ms
- * - Sidebar desktop berlapis dengan glowing pill aktif, Trakteer, dan kartu pengguna Online
- * - Kanvas ambient mesh 3-layer acrylic glass dengan kontrol utilitas header atas
- */
+/** Application shell coordinating desktop sidebar, header utility bar, skip link, and mobile navigation. */
 export function AppShell({
   route,
   onNavigate,
@@ -87,16 +82,22 @@ export function AppShell({
   );
   const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(resolveDefaultSidebarExpanded);
   const themeCtx = useOptionalThemeContext();
-  const uiEnhancer = themeCtx?.uiEnhancer ?? true;
-  const reducedMotionMode = themeCtx?.motionEngine === "css_native" ? "always" : ("user" as const);
+  const uiMode = themeCtx?.uiMode ?? (themeCtx?.uiEnhancer === false ? "biasa" : "enhanced");
+  const isEnhanced = uiMode === "enhanced";
+  const isAntiSlop = uiMode === "anti-slop";
+  const reducedMotionMode =
+    isAntiSlop || themeCtx?.motionEngine === "css_native" ? "always" : ("user" as const);
 
   return (
     <MotionConfig reducedMotion={reducedMotionMode}>
       <div className="relative flex h-dvh w-full overflow-hidden overscroll-none bg-[var(--bg-canvas)] text-[var(--text-primary)]">
+        <a href="#main-content" className="skip-link">
+          {pickLang(language, "Lompati ke konten utama", "Skip to main content")}
+        </a>
         <motion.div
-          initial={{ clipPath: "circle(0% at 32px 32px)" }}
+          initial={isAntiSlop ? false : { clipPath: "circle(0% at 32px 32px)" }}
           animate={{ clipPath: "circle(150% at 32px 32px)" }}
-          transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+          transition={isAntiSlop ? { duration: 0 } : { duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
           className="shell-frame flex h-full w-full min-w-0 overflow-hidden overscroll-none"
         >
           <DesktopSidebar
@@ -109,63 +110,84 @@ export function AppShell({
           />
 
           <motion.div
-            variants={SHELL_STAGGER_VARIANTS}
-            initial="hidden"
+            {...(isAntiSlop ? {} : { variants: SHELL_STAGGER_VARIANTS })}
+            initial={isAntiSlop ? false : "hidden"}
             animate="visible"
             className="workspace-canvas relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden overscroll-none"
           >
-            {/* Header atas ringkas: menyatu dengan kanvas ambient mesh saat UI Enhancer aktif */}
             <motion.header
-              variants={HEADER_ITEM_VARIANTS}
+              {...(isAntiSlop ? {} : { variants: HEADER_ITEM_VARIANTS })}
               className={cn(
                 "safe-area-header landscape-compact-header relative z-20 flex min-h-[50px] shrink-0 items-center justify-between gap-3 lg:min-h-[54px]",
-                uiEnhancer
+                isEnhanced
                   ? "border-b border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--glass-table-bg,var(--bg-surface))] text-[var(--text-primary)] backdrop-blur-md"
-                  : "border-b border-[var(--shell-chrome-border)] bg-[var(--shell-chrome-bg)] text-[var(--shell-chrome-fg)]",
+                  : isAntiSlop
+                    ? "border-b border-[var(--border-subtle)] bg-[var(--bg-surface-elevated)] text-[var(--text-primary)]"
+                    : "border-b border-[var(--shell-chrome-border)] bg-[var(--shell-chrome-bg)] text-[var(--shell-chrome-fg)]",
               )}
             >
               <div className="flex min-w-0 items-center gap-2.5">
                 <button
                   type="button"
                   onClick={() => setDrawerMode("tablet-all")}
-                  aria-label={language === "id" ? "Buka menu navigasi" : "Open navigation menu"}
+                  aria-label={
+                    isAntiSlop
+                      ? language === "id"
+                        ? "Menu navigasi"
+                        : "Navigation menu"
+                      : language === "id"
+                        ? "Buka menu navigasi"
+                        : "Open navigation menu"
+                  }
                   className={cn(
-                    "hidden min-h-9 min-w-9 cursor-pointer items-center justify-center rounded-lg border transition-colors active:scale-95 md:inline-flex lg:hidden",
-                    uiEnhancer
-                      ? "acrylic-control-capsule text-[var(--text-primary)]"
-                      : "border-[var(--shell-chrome-border)] bg-[var(--shell-chrome-btn-bg)] text-[var(--shell-chrome-fg)] hover:bg-[var(--shell-chrome-btn-hover)]",
+                    "hidden cursor-pointer items-center justify-center rounded-lg border transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] md:inline-flex lg:hidden",
+                    isEnhanced
+                      ? "acrylic-control-capsule min-h-9 min-w-9 text-[var(--text-primary)] active:scale-95"
+                      : isAntiSlop
+                        ? "min-h-11 min-w-11 gap-1.5 border-[var(--border-strong)] bg-[var(--bg-surface)] px-3 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-sunken)]"
+                        : "min-h-9 min-w-9 border-[var(--shell-chrome-border)] bg-[var(--shell-chrome-btn-bg)] text-[var(--shell-chrome-fg)] hover:bg-[var(--shell-chrome-btn-hover)] active:scale-95",
                   )}
                 >
-                  <Menu className="h-4 w-4" />
+                  <Menu className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  {isAntiSlop && <span>Menu</span>}
                 </button>
 
-                {/* Selalu berada di DOM header untuk konsistensi brand & testing; pada desktop expanded tersembunyi visual agar sidebar menjadi jangkar utama */}
+                {/* Keep brand node in header DOM across breakpoints; visually hidden on expanded desktop so sidebar holds the brand anchor */}
                 <button
                   type="button"
                   onClick={() => onNavigate("formulation")}
                   className={cn(
-                    "flex min-w-0 cursor-pointer items-center gap-2 text-left transition-opacity hover:opacity-95 active:scale-[0.99] motion-reduce:transform-none lg:gap-2.5",
+                    "flex min-w-0 cursor-pointer items-center gap-2 text-left transition-opacity hover:opacity-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] lg:gap-2.5",
+                    isAntiSlop
+                      ? "min-h-11 rounded-md px-1"
+                      : "active:scale-[0.99] motion-reduce:transform-none",
                     sidebarExpanded && "lg:hidden",
                   )}
                 >
                   <img
                     src={appLogo}
                     alt="Logo OpenFormu"
+                    width={32}
+                    height={32}
                     className="h-8 w-8 shrink-0 rounded-[10px] object-cover lg:hidden"
                   />
                   <p className="inline-flex items-baseline gap-0 truncate text-[18px] font-extrabold tracking-tight lg:text-[20px]">
                     <span
                       className={
-                        uiEnhancer ? "text-[var(--text-primary)]" : "text-[var(--shell-chrome-fg)]"
+                        isEnhanced || isAntiSlop
+                          ? "text-[var(--text-primary)]"
+                          : "text-[var(--shell-chrome-fg)]"
                       }
                     >
                       Open
                     </span>
                     <span
                       className={
-                        uiEnhancer
+                        isEnhanced
                           ? "text-[var(--status-success)]"
-                          : "text-[var(--shell-chrome-accent)]"
+                          : isAntiSlop
+                            ? "text-[var(--color-primary)]"
+                            : "text-[var(--shell-chrome-accent)]"
                       }
                     >
                       Formu
@@ -179,20 +201,27 @@ export function AppShell({
                   <button
                     type="button"
                     onClick={onApplyUpdate}
-                    className="hidden cursor-pointer items-center gap-1 rounded-full border border-[var(--status-warning-border)] bg-[var(--status-warning-soft)] px-2.5 py-1 text-[11px] font-semibold text-[var(--status-warning)] transition-colors hover:brightness-95 active:scale-95 sm:inline-flex"
+                    className={cn(
+                      "hidden cursor-pointer items-center gap-1 border border-[var(--status-warning-border)] bg-[var(--status-warning-soft)] px-2.5 py-1 text-[11px] font-semibold text-[var(--status-warning)] transition-colors hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] sm:inline-flex",
+                      isAntiSlop ? "min-h-11 rounded-md" : "rounded-full active:scale-95",
+                    )}
                   >
-                    <RefreshCw className="h-3 w-3" />
+                    <RefreshCw className="h-3 w-3" aria-hidden="true" />
                     <span>{language === "id" ? "Update Tersedia" : "Update Ready"}</span>
                   </button>
                 )}
 
                 <div
-                  data-header-utility-capsule={uiEnhancer ? "acrylic" : "chrome"}
+                  data-header-utility-capsule={
+                    isEnhanced ? "acrylic" : isAntiSlop ? "anti-slop" : "chrome"
+                  }
                   className={cn(
-                    "relative flex items-center gap-1.5 rounded-full p-1",
-                    uiEnhancer
-                      ? "acrylic-control-capsule"
-                      : "border border-[var(--shell-chrome-border)] bg-[var(--shell-chrome-btn-bg)] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]",
+                    "relative flex items-center gap-1.5 p-1",
+                    isEnhanced
+                      ? "acrylic-control-capsule rounded-full"
+                      : isAntiSlop
+                        ? "rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)]"
+                        : "rounded-full border border-[var(--shell-chrome-border)] bg-[var(--shell-chrome-btn-bg)] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]",
                   )}
                 >
                   <button
@@ -205,18 +234,23 @@ export function AppShell({
                     }
                     title={language === "id" ? "Bahasa: Indonesia" : "Language: English"}
                     className={cn(
-                      "elastic-size-box inline-flex h-7 min-w-8 cursor-pointer items-center justify-center gap-1 rounded-full px-2 text-[11px] font-bold uppercase transition-[transform,background-color] duration-150 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] motion-reduce:transform-none",
-                      uiEnhancer
-                        ? "text-[var(--text-primary)] hover:bg-black/5 dark:hover:bg-white/10"
-                        : "text-[var(--shell-chrome-fg)] hover:bg-[var(--shell-chrome-btn-hover)]",
+                      "elastic-size-box inline-flex cursor-pointer items-center justify-center gap-1 text-[11px] font-bold uppercase transition-[transform,background-color] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] motion-reduce:transform-none",
+                      isEnhanced
+                        ? "h-7 min-w-8 rounded-full px-2 text-[var(--text-primary)] hover:bg-black/5 active:scale-95 dark:hover:bg-white/10"
+                        : isAntiSlop
+                          ? "min-h-11 min-w-11 rounded-md px-2.5 text-[var(--text-primary)] hover:bg-[var(--bg-sunken)]"
+                          : "h-7 min-w-8 rounded-full px-2 text-[var(--shell-chrome-fg)] hover:bg-[var(--shell-chrome-btn-hover)] active:scale-95",
                     )}
                   >
                     <Languages
+                      aria-hidden="true"
                       className={cn(
                         "h-3.5 w-3.5",
-                        uiEnhancer
+                        isEnhanced
                           ? "text-[var(--status-success)]"
-                          : "text-[var(--shell-chrome-accent)]",
+                          : isAntiSlop
+                            ? "text-[var(--color-primary)]"
+                            : "text-[var(--shell-chrome-accent)]",
                       )}
                     />
                     <span className="hidden sm:inline">
@@ -246,16 +280,21 @@ export function AppShell({
                           : "Enable light mode"
                     }
                     className={cn(
-                      "inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full transition-[transform,background-color] duration-150 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] motion-reduce:transform-none",
-                      uiEnhancer
-                        ? "text-[var(--text-primary)] hover:bg-black/5 dark:hover:bg-white/10"
-                        : "text-[var(--shell-chrome-fg)] hover:bg-[var(--shell-chrome-btn-hover)]",
+                      "inline-flex cursor-pointer items-center justify-center transition-[transform,background-color] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] motion-reduce:transform-none",
+                      isEnhanced
+                        ? "h-7 w-7 rounded-full text-[var(--text-primary)] hover:bg-black/5 active:scale-95 dark:hover:bg-white/10"
+                        : isAntiSlop
+                          ? "min-h-11 min-w-11 rounded-md text-[var(--text-primary)] hover:bg-[var(--bg-sunken)]"
+                          : "h-7 w-7 rounded-full text-[var(--shell-chrome-fg)] hover:bg-[var(--shell-chrome-btn-hover)] active:scale-95",
                     )}
                   >
                     {theme === "light" ? (
-                      <Moon className="h-3.5 w-3.5" />
+                      <Moon className="h-3.5 w-3.5" aria-hidden="true" />
                     ) : (
-                      <Sun className="h-3.5 w-3.5 text-[var(--status-warning)]" />
+                      <Sun
+                        className="h-3.5 w-3.5 text-[var(--status-warning)]"
+                        aria-hidden="true"
+                      />
                     )}
                   </button>
 
@@ -269,22 +308,26 @@ export function AppShell({
                       "Open Theme & Engine Settings",
                     )}
                     className={cn(
-                      "hidden h-7 w-7 cursor-pointer items-center justify-center rounded-full transition-[transform,background-color,color] duration-150 active:scale-95 sm:inline-flex",
-                      uiEnhancer
-                        ? "text-[var(--text-secondary)] hover:bg-black/5 hover:text-[var(--text-primary)] dark:hover:bg-white/10"
-                        : "text-[var(--shell-chrome-fg)]/85 hover:bg-[var(--shell-chrome-btn-hover)] hover:text-[var(--shell-chrome-fg)]",
+                      "hidden cursor-pointer items-center justify-center transition-[transform,background-color,color] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] sm:inline-flex",
+                      isEnhanced
+                        ? "h-7 w-7 rounded-full text-[var(--text-secondary)] hover:bg-black/5 hover:text-[var(--text-primary)] active:scale-95 dark:hover:bg-white/10"
+                        : isAntiSlop
+                          ? "min-h-11 min-w-11 rounded-md text-[var(--text-primary)] hover:bg-[var(--bg-sunken)]"
+                          : "h-7 w-7 rounded-full text-[var(--shell-chrome-fg)]/85 hover:bg-[var(--shell-chrome-btn-hover)] hover:text-[var(--shell-chrome-fg)] active:scale-95",
                     )}
                   >
-                    <Palette className="h-3.5 w-3.5" />
+                    <Palette className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
                 </div>
               </div>
             </motion.header>
 
             <motion.main
-              variants={MAIN_ITEM_VARIANTS}
+              id="main-content"
+              tabIndex={-1}
+              {...(isAntiSlop ? {} : { variants: MAIN_ITEM_VARIANTS })}
               className={cn(
-                "safe-area-main-x min-h-0 min-w-0 flex-1 overflow-x-hidden overscroll-contain",
+                "safe-area-main-x min-h-0 min-w-0 flex-1 overflow-x-hidden overscroll-contain focus:outline-none",
                 route === "formulation"
                   ? "overflow-hidden"
                   : "workspace-main-scrollbar overflow-y-auto pb-24 md:pb-4 lg:pb-0",

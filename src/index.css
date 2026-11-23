@@ -2,6 +2,7 @@
 @import "./theme/themes.css";
 @import "./theme/neumorphism-shadows.css";
 @import "./theme/mobile-adaptive.css";
+@import "./theme/anti-slop.css";
 
 @custom-variant dark (&:where(.dark, .dark *, [data-mode="dark"], [data-mode="dark"] *));
 
@@ -121,9 +122,61 @@
   .font-mono {
     font-family: var(--font-mono);
   }
+
+  a[href],
+  button,
+  summary,
+  select,
+  label[for],
+  label:has(> input[type="checkbox"], > input[type="radio"]),
+  [role="button"],
+  [role="link"],
+  [role="tab"],
+  [role="menuitem"],
+  [role="option"],
+  [role="switch"],
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="file"],
+  input[type="submit"],
+  input[type="button"],
+  input[type="reset"],
+  input[type="range"],
+  input[type="color"] {
+    cursor: pointer;
+  }
+
+  :disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
 }
 
 @layer components {
+  .skip-link {
+    position: fixed;
+    top: -100px;
+    left: 12px;
+    z-index: 100;
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    border-radius: 0.5rem;
+    border: 2px solid var(--border-strong);
+    background-color: var(--color-primary);
+    color: var(--text-on-primary);
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .skip-link:focus,
+  .skip-link:focus-visible {
+    top: max(12px, var(--safe-area-top));
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
   .custom-scrollbar {
     scrollbar-gutter: auto;
   }
@@ -213,7 +266,7 @@
       );
   }
 
-  /* Fine tactile luxury color grain (100% offline inline SVG noise — subtle editorial matte depth) */
+  /* Fine tactile color grain (offline inline SVG noise for subtle editorial matte depth) */
   .shell-frame::after,
   .workspace-canvas::after {
     content: "";
@@ -241,7 +294,7 @@
     color: var(--text-primary);
   }
 
-  [data-ui-enhancer="false"] .workspace-canvas {
+  [data-ui-enhancer="false"]:not([data-ui-mode="anti-slop"]) .workspace-canvas {
     background-image: none;
   }
 
@@ -251,7 +304,7 @@
     mix-blend-mode: multiply;
   }
 
-  [data-ui-enhancer="false"] .workspace-canvas::after {
+  [data-ui-enhancer="false"]:not([data-ui-mode="anti-slop"]) .workspace-canvas::after {
     opacity: 0;
   }
 
@@ -312,8 +365,8 @@
     box-shadow:
       inset 0 1px 0 rgba(255, 240, 210, 0.35),
       0 8px 22px -6px rgba(245, 158, 11, 0.28);
-    backdrop-filter: blur(12px) saturate(150%);
     -webkit-backdrop-filter: blur(12px) saturate(150%);
+    backdrop-filter: blur(12px) saturate(150%);
   }
 
   .trakteer-glass-card:hover {
@@ -368,8 +421,8 @@
   .acrylic-panel {
     background: var(--glass-panel-bg, var(--bg-surface-elevated));
     border: 1px solid var(--glass-border-tint, var(--border-subtle));
-    backdrop-filter: blur(var(--ui-blur-px, 20px)) saturate(165%);
     -webkit-backdrop-filter: blur(var(--ui-blur-px, 20px)) saturate(165%);
+    backdrop-filter: blur(var(--ui-blur-px, 20px)) saturate(165%);
     box-shadow:
       inset 0 1.2px 0 0 var(--glass-rim-top, rgba(255, 255, 255, 0.72)),
       inset 1.2px 0 0 0 var(--glass-rim-left, rgba(255, 255, 255, 0.45)),
@@ -384,8 +437,8 @@
   .acrylic-control-capsule {
     background: var(--glass-panel-elevated, var(--bg-surface-elevated));
     border: 1px solid var(--glass-border-tint, var(--border-subtle));
-    backdrop-filter: blur(var(--ui-blur-px, 20px)) saturate(165%);
     -webkit-backdrop-filter: blur(var(--ui-blur-px, 20px)) saturate(165%);
+    backdrop-filter: blur(var(--ui-blur-px, 20px)) saturate(165%);
     box-shadow:
       inset 0 1.2px 0 0 var(--glass-rim-top, rgba(255, 255, 255, 0.8)),
       inset 1px 0 0 0 var(--glass-rim-left, rgba(255, 255, 255, 0.5)),
@@ -395,8 +448,8 @@
   .acrylic-subcard {
     background: var(--glass-panel-elevated, var(--bg-surface-elevated));
     border: 1px solid var(--glass-border-tint, var(--border-subtle));
-    backdrop-filter: blur(calc(var(--ui-blur-px, 20px) * 0.7)) saturate(155%);
     -webkit-backdrop-filter: blur(calc(var(--ui-blur-px, 20px) * 0.7)) saturate(155%);
+    backdrop-filter: blur(calc(var(--ui-blur-px, 20px) * 0.7)) saturate(155%);
     box-shadow:
       inset 0 1px 0 0 var(--glass-rim-top, rgba(255, 255, 255, 0.78)),
       0 4px 16px -6px color-mix(in srgb, var(--color-primary) 12%, transparent);
@@ -426,38 +479,38 @@
   [data-engine-mode="balanced"] .glass-card,
   [data-engine-mode="balanced"] .acrylic-panel,
   [data-engine-mode="balanced"] .acrylic-control-capsule {
-    backdrop-filter: blur(var(--ui-blur-px, 12px)) saturate(140%);
     -webkit-backdrop-filter: blur(var(--ui-blur-px, 12px)) saturate(140%);
+    backdrop-filter: blur(var(--ui-blur-px, 12px)) saturate(140%);
   }
 
   [data-engine-mode="crisp"] .glass-card,
   [data-engine-mode="crisp"] .acrylic-panel,
   [data-engine-mode="crisp"] .acrylic-control-capsule,
   [data-engine-mode="crisp"] .acrylic-subcard,
-  [data-ui-enhancer="false"] .glass-card,
-  [data-ui-enhancer="false"] .acrylic-panel,
-  [data-ui-enhancer="false"] .acrylic-control-capsule,
-  [data-ui-enhancer="false"] .acrylic-subcard {
-    backdrop-filter: none;
+  [data-ui-enhancer="false"]:not([data-ui-mode="anti-slop"]) .glass-card,
+  [data-ui-enhancer="false"]:not([data-ui-mode="anti-slop"]) .acrylic-panel,
+  [data-ui-enhancer="false"]:not([data-ui-mode="anti-slop"]) .acrylic-control-capsule,
+  [data-ui-enhancer="false"]:not([data-ui-mode="anti-slop"]) .acrylic-subcard {
     -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 
-  [data-ui-enhancer="false"] .glass-card,
-  [data-ui-enhancer="false"] .acrylic-panel {
+  [data-ui-enhancer="false"]:not([data-ui-mode="anti-slop"]) .glass-card,
+  [data-ui-enhancer="false"]:not([data-ui-mode="anti-slop"]) .acrylic-panel {
     background: var(--bg-surface-elevated);
     border: 1px solid var(--border-subtle);
     box-shadow: var(--shadow-neu-flat);
   }
 
-  [data-ui-enhancer="false"] .acrylic-control-capsule,
-  [data-ui-enhancer="false"] .acrylic-subcard {
+  [data-ui-enhancer="false"]:not([data-ui-mode="anti-slop"]) .acrylic-control-capsule,
+  [data-ui-enhancer="false"]:not([data-ui-mode="anti-slop"]) .acrylic-subcard {
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     box-shadow: none;
   }
 
-  [data-ui-enhancer="false"] .acrylic-value-pill,
-  [data-ui-enhancer="false"] .acrylic-tab-pill {
+  [data-ui-enhancer="false"]:not([data-ui-mode="anti-slop"]) .acrylic-value-pill,
+  [data-ui-enhancer="false"]:not([data-ui-mode="anti-slop"]) .acrylic-tab-pill {
     background: var(--bg-surface-elevated);
     border: 1px solid var(--border-subtle);
     box-shadow: var(--shadow-neu-flat);
@@ -531,8 +584,8 @@
 
   [role="dialog"] .glass-card {
     background: var(--bg-surface-elevated);
-    backdrop-filter: none;
     -webkit-backdrop-filter: none;
+    backdrop-filter: none;
     box-shadow:
       0 2px 10px -2px var(--shadow-dark),
       inset 0 1px 0 color-mix(in srgb, var(--shadow-light) 28%, transparent);

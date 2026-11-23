@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { Calculator, FolderOpen, Menu, Wheat } from "lucide-react";
 import type { AppRoute } from "../../hooks/use-prototype-store";
+import { useOptionalThemeContext } from "../../theme";
 import type { AppLanguage } from "../../types";
 import { cn } from "../../utils/cn";
 import { NAV_ITEMS, getNavLabel } from "./navigation-config";
@@ -17,17 +18,17 @@ const PRIMARY_MOBILE_ROUTES: readonly AppRoute[] = ["formulation", "ingredients"
 function renderMobileIcon(id: AppRoute) {
   switch (id) {
     case "formulation":
-      return <Calculator className="h-[18px] w-[18px]" />;
+      return <Calculator className="h-[18px] w-[18px]" aria-hidden="true" />;
     case "ingredients":
-      return <Wheat className="h-[18px] w-[18px]" />;
+      return <Wheat className="h-[18px] w-[18px]" aria-hidden="true" />;
     case "recipes":
-      return <FolderOpen className="h-[18px] w-[18px]" />;
+      return <FolderOpen className="h-[18px] w-[18px]" aria-hidden="true" />;
     default:
-      return <Menu className="h-[18px] w-[18px]" />;
+      return <Menu className="h-[18px] w-[18px]" aria-hidden="true" />;
   }
 }
 
-/** Navigasi bawah untuk layar ponsel (< 768px) dengan target sentuh >= 44px dan safe-area inset. */
+/** Bottom navigation for mobile viewports (< 768px) with >= 44px tap targets and safe-area insets. */
 export const MobileBottomNav = memo(function MobileBottomNav({
   route,
   onNavigate,
@@ -35,11 +36,17 @@ export const MobileBottomNav = memo(function MobileBottomNav({
   language,
 }: MobileBottomNavProps) {
   const isOverflowRoute = !PRIMARY_MOBILE_ROUTES.includes(route);
+  const isAntiSlop = useOptionalThemeContext()?.uiMode === "anti-slop";
 
   return (
     <nav
       aria-label="Navigasi bawah mobile"
-      className="safe-area-bottom-nav fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-[var(--border-subtle)] bg-[var(--bg-surface-elevated)] pt-1 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] md:hidden"
+      className={cn(
+        "safe-area-bottom-nav fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 gap-1 px-1.5 pt-1 md:hidden",
+        isAntiSlop
+          ? "border-t border-[var(--border-strong)] bg-[var(--bg-surface-elevated)]"
+          : "border-t border-[var(--border-subtle)] bg-[var(--bg-surface-elevated)] shadow-[0_-4px_12px_rgba(0,0,0,0.08)]",
+      )}
     >
       {PRIMARY_MOBILE_ROUTES.map((id) => {
         const item = NAV_ITEMS.find((n) => n.id === id)!;
@@ -51,10 +58,15 @@ export const MobileBottomNav = memo(function MobileBottomNav({
             onClick={() => onNavigate(id)}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "landscape-bottom-nav-btn flex min-h-12 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-[11px] font-semibold transition-[transform,background-color,color] duration-150 active:scale-95 motion-reduce:transform-none",
+              "landscape-bottom-nav-btn flex min-h-12 cursor-pointer flex-col items-center justify-center gap-0.5 px-1 text-[11px] transition-[transform,background-color,color] duration-150 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--focus-ring)] motion-reduce:transform-none",
+              isAntiSlop ? "rounded-lg" : "rounded-xl active:scale-95",
               active
-                ? "bg-[var(--color-primary)] text-[var(--text-on-primary)] shadow-[var(--shadow-neu-flat)]"
-                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                ? isAntiSlop
+                  ? "bg-[var(--color-primary)] font-bold text-[var(--text-on-primary)]"
+                  : "bg-[var(--color-primary)] font-semibold text-[var(--text-on-primary)] shadow-[var(--shadow-neu-flat)]"
+                : isAntiSlop
+                  ? "font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-sunken)] hover:text-[var(--text-primary)]"
+                  : "font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
             )}
           >
             {renderMobileIcon(id)}
@@ -65,16 +77,21 @@ export const MobileBottomNav = memo(function MobileBottomNav({
       <button
         type="button"
         onClick={onOpenDrawer}
-        aria-label={language === "id" ? "Buka menu lainnya" : "Open more menu"}
+        aria-label={language === "id" ? "Menu lainnya" : "Menu options"}
         className={cn(
-          "landscape-bottom-nav-btn flex min-h-12 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-[11px] font-semibold transition-[transform,background-color,color] duration-150 active:scale-95 motion-reduce:transform-none",
+          "landscape-bottom-nav-btn flex min-h-12 cursor-pointer flex-col items-center justify-center gap-0.5 px-1 text-[11px] transition-[transform,background-color,color] duration-150 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--focus-ring)] motion-reduce:transform-none",
+          isAntiSlop ? "rounded-lg" : "rounded-xl active:scale-95",
           isOverflowRoute
-            ? "bg-[var(--color-primary)] text-[var(--text-on-primary)] shadow-[var(--shadow-neu-flat)]"
-            : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+            ? isAntiSlop
+              ? "bg-[var(--color-primary)] font-bold text-[var(--text-on-primary)]"
+              : "bg-[var(--color-primary)] font-semibold text-[var(--text-on-primary)] shadow-[var(--shadow-neu-flat)]"
+            : isAntiSlop
+              ? "font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-sunken)] hover:text-[var(--text-primary)]"
+              : "font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
         )}
       >
-        <Menu className="h-[18px] w-[18px]" />
-        <span>{language === "id" ? "Menu" : "More"}</span>
+        <Menu className="h-[18px] w-[18px]" aria-hidden="true" />
+        <span>Menu</span>
       </button>
     </nav>
   );

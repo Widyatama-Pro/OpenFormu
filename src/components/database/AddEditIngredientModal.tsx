@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { FEED_CLASSES, feedClassToCategory, getFeedClassLabel } from "../../data/feed-classes";
 import { pickLang } from "../../i18n";
+import { useOptionalThemeContext } from "../../theme";
 import type { AppLanguage, Basis, FeedClassCode, Ingredient } from "../../types";
+import { cn } from "../../utils/cn";
 import { parseLocaleDecimal } from "../../utils/locale-number";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
@@ -21,6 +23,8 @@ export function AddEditIngredientModal({
   onClose,
   onSave,
 }: AddEditIngredientModalProps) {
+  const isAntiSlop = useOptionalThemeContext()?.uiMode === "anti-slop";
+  const fieldId = useId();
   const [name, setName] = useState("");
   const [feedClass, setFeedClass] = useState<FeedClassCode>(4);
   const [basis, setBasis] = useState<Basis>("as_fed");
@@ -32,6 +36,19 @@ export function AddEditIngredientModal({
   const [p, setP] = useState("0.3");
   const [source, setSource] = useState("Input Lokal Pengguna / Lab");
   const [error, setError] = useState<string | null>(null);
+  const [prevOpen, setPrevOpen] = useState(open);
+
+  if (prevOpen !== open) {
+    setPrevOpen(open);
+    if (!open) {
+      setError(null);
+    }
+  }
+
+  const handleClose = () => {
+    setError(null);
+    onClose();
+  };
 
   const handleSubmit = () => {
     const trimmedName = name.trim();
@@ -103,7 +120,7 @@ export function AddEditIngredientModal({
   return (
     <SheetDialog
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       title={pickLang(language, "Tambah Bahan Pakan Baru", "Add New Feed Ingredient")}
       subtitle={pickLang(
         language,
@@ -112,7 +129,7 @@ export function AddEditIngredientModal({
       )}
       footer={
         <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={handleClose}>
             {pickLang(language, "Batal", "Cancel")}
           </Button>
           <Button variant="primary" onClick={handleSubmit}>
@@ -125,17 +142,24 @@ export function AddEditIngredientModal({
         {error && (
           <p
             role="alert"
-            className="glass-card glass-card-coral rounded-2xl border border-[var(--status-danger-border)] bg-[var(--status-danger-soft)] p-3 font-medium text-[var(--status-danger)]"
+            className={cn(
+              "border border-[var(--status-danger-border)] bg-[var(--status-danger-soft)] p-3 font-medium text-[var(--status-danger)]",
+              isAntiSlop ? "rounded-lg" : "glass-card glass-card-coral rounded-2xl",
+            )}
           >
             {error}
           </p>
         )}
 
         <div>
-          <label className="mb-1 block font-medium text-[var(--text-primary)]">
+          <label
+            htmlFor={`${fieldId}-name`}
+            className="mb-1 block font-medium text-[var(--text-primary)]"
+          >
             {pickLang(language, "Nama Bahan", "Ingredient Name")}
           </label>
           <Input
+            id={`${fieldId}-name`}
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={pickLang(language, "Mis. Bungkil Kopra Lokal", "e.g. Local Copra Meal")}
@@ -144,7 +168,10 @@ export function AddEditIngredientModal({
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block font-medium text-[var(--text-primary)]">
+            <label
+              htmlFor={`${fieldId}-class`}
+              className="mb-1 block font-medium text-[var(--text-primary)]"
+            >
               {pickLang(
                 language,
                 "Klasifikasi (8 Kelas Standar)",
@@ -152,6 +179,7 @@ export function AddEditIngredientModal({
               )}
             </label>
             <ThemedSelect
+              id={`${fieldId}-class`}
               ariaLabel={pickLang(
                 language,
                 "Klasifikasi (8 Kelas Standar)",
@@ -169,10 +197,14 @@ export function AddEditIngredientModal({
             />
           </div>
           <div>
-            <label className="mb-1 block font-medium text-[var(--text-primary)]">
+            <label
+              htmlFor={`${fieldId}-basis`}
+              className="mb-1 block font-medium text-[var(--text-primary)]"
+            >
               {pickLang(language, "Basis Data Lab", "Lab Data Basis")}
             </label>
             <ThemedSelect
+              id={`${fieldId}-basis`}
               ariaLabel={pickLang(language, "Basis Data Lab", "Lab Data Basis")}
               modalTitle={pickLang(language, "Pilih Basis Data Lab", "Select Lab Data Basis")}
               value={basis}
@@ -192,47 +224,110 @@ export function AddEditIngredientModal({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block font-medium text-[var(--text-primary)]">
+            <label
+              htmlFor={`${fieldId}-price`}
+              className="mb-1 block font-medium text-[var(--text-primary)]"
+            >
               {pickLang(language, "Harga / kg As-Fed (Rp)", "Price / kg As-Fed (IDR)")}
             </label>
-            <Input numeric value={price} onChange={(e) => setPrice(e.target.value)} />
+            <Input
+              id={`${fieldId}-price`}
+              numeric
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+            />
           </div>
           <div>
-            <label className="mb-1 block font-medium text-[var(--text-primary)]">
+            <label
+              htmlFor={`${fieldId}-dm`}
+              className="mb-1 block font-medium text-[var(--text-primary)]"
+            >
               {pickLang(language, "Bahan Kering / BK (%)", "Dry Matter / DM (%)")}
             </label>
-            <Input numeric value={dryMatter} onChange={(e) => setDryMatter(e.target.value)} />
+            <Input
+              id={`${fieldId}-dm`}
+              numeric
+              value={dryMatter}
+              onChange={(e) => setDryMatter(e.target.value)}
+            />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div>
-            <label className="mb-1 block font-medium text-[var(--text-primary)]">
+            <label
+              htmlFor={`${fieldId}-cp`}
+              className="mb-1 block font-medium text-[var(--text-primary)]"
+            >
               {pickLang(language, "PK (%)", "CP (%)")}
             </label>
-            <Input numeric value={cp} onChange={(e) => setCp(e.target.value)} placeholder="N/A" />
+            <Input
+              id={`${fieldId}-cp`}
+              numeric
+              value={cp}
+              onChange={(e) => setCp(e.target.value)}
+              placeholder="N/A"
+            />
           </div>
           <div>
-            <label className="mb-1 block font-medium text-[var(--text-primary)]">
+            <label
+              htmlFor={`${fieldId}-me`}
+              className="mb-1 block font-medium text-[var(--text-primary)]"
+            >
               {pickLang(language, "EM (kcal/kg)", "ME (kcal/kg)")}
             </label>
-            <Input numeric value={me} onChange={(e) => setMe(e.target.value)} placeholder="N/A" />
+            <Input
+              id={`${fieldId}-me`}
+              numeric
+              value={me}
+              onChange={(e) => setMe(e.target.value)}
+              placeholder="N/A"
+            />
           </div>
           <div>
-            <label className="mb-1 block font-medium text-[var(--text-primary)]">Ca (%)</label>
-            <Input numeric value={ca} onChange={(e) => setCa(e.target.value)} placeholder="N/A" />
+            <label
+              htmlFor={`${fieldId}-ca`}
+              className="mb-1 block font-medium text-[var(--text-primary)]"
+            >
+              Ca (%)
+            </label>
+            <Input
+              id={`${fieldId}-ca`}
+              numeric
+              value={ca}
+              onChange={(e) => setCa(e.target.value)}
+              placeholder="N/A"
+            />
           </div>
           <div>
-            <label className="mb-1 block font-medium text-[var(--text-primary)]">P (%)</label>
-            <Input numeric value={p} onChange={(e) => setP(e.target.value)} placeholder="N/A" />
+            <label
+              htmlFor={`${fieldId}-p`}
+              className="mb-1 block font-medium text-[var(--text-primary)]"
+            >
+              P (%)
+            </label>
+            <Input
+              id={`${fieldId}-p`}
+              numeric
+              value={p}
+              onChange={(e) => setP(e.target.value)}
+              placeholder="N/A"
+            />
           </div>
         </div>
 
         <div>
-          <label className="mb-1 block font-medium text-[var(--text-primary)]">
+          <label
+            htmlFor={`${fieldId}-source`}
+            className="mb-1 block font-medium text-[var(--text-primary)]"
+          >
             {pickLang(language, "Sumber Data / Referensi", "Data Source / Reference")}
           </label>
-          <Input value={source} onChange={(e) => setSource(e.target.value)} />
+          <Input
+            id={`${fieldId}-source`}
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+          />
         </div>
       </div>
     </SheetDialog>

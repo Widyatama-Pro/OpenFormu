@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, Search, X } from "lucide-react";
 import { pickLang } from "../../i18n";
+import { useOptionalThemeContext } from "../../theme";
 import type { AppLanguage } from "../../types";
 import { cn } from "../../utils/cn";
 
@@ -50,6 +51,22 @@ function groupOptions(options: readonly ThemedSelectOption[]): readonly GroupedE
   return buckets;
 }
 
+function isViewportMobile(): boolean {
+  if (typeof window === "undefined") return false;
+  if (typeof window.matchMedia === "function" && window.matchMedia("(max-width: 767px)").matches) {
+    return true;
+  }
+  return window.innerWidth < 768;
+}
+
+function getOverlayFocusables(container: HTMLElement): HTMLElement[] {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ),
+  ).filter((el) => !el.closest('[hidden], [aria-hidden="true"]'));
+}
+
 /**
  * Pemilih dropdown & modal modern yang 100% mengikuti token tema aktif OpenFormu:
  * - Trigger selalu mendukung `w-full min-w-0 truncate` + ikon chevron di kanan
@@ -74,7 +91,7 @@ export function ThemedSelect({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [highlightIdx, setHighlightIdx] = useState(-1);
-  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState<boolean>(isViewportMobile);
   const [popoverStyle, setPopoverStyle] = useState<{
     readonly top: number;
     readonly left: number;
@@ -87,6 +104,7 @@ export function ThemedSelect({
   const popoverRef = useRef<HTMLDivElement | null>(null);
   const listboxRef = useRef<HTMLDivElement | null>(null);
   const listboxId = useId();
+  const isAntiSlop = useOptionalThemeContext()?.uiMode === "anti-slop";
 
   const selectedOption = useMemo(
     () => options.find((opt) => opt.value === value),
@@ -107,6 +125,7 @@ export function ThemedSelect({
   const grouped = useMemo(() => groupOptions(filteredOptions), [filteredOptions]);
 
   const openMenu = useCallback(() => {
+    setIsMobileViewport(isViewportMobile());
     const selectedIdx = options.findIndex((opt) => opt.value === value);
     setHighlightIdx(selectedIdx >= 0 ? selectedIdx : 0);
     setOpen(true);
@@ -140,14 +159,14 @@ export function ThemedSelect({
     }
   }, []);
 
-  // Efek 1: Penentuan posisi popover & tutup saat klik di luar (tidak terpicu ulang saat hover/arrow)
+  // Reposition desktop popover and close on outside click
   useEffect(() => {
     if (!open) return;
 
     const updatePosition = () => {
       const vw = window.innerWidth;
       const vh = window.innerHeight;
-      const mobile = vw < 768;
+      const mobile = isViewportMobile();
       setIsMobileViewport(mobile);
 
       if (mobile || !triggerRef.current) {
@@ -202,41 +221,46 @@ export function ThemedSelect({
     };
   }, [open, popoverMinWidthPx]);
 
-  // Efek 2: Fokus awal & gulir ke opsi aktif tepat sekali saat menu dibuka
+  // Focus initial control inside dialog/popover and scroll active option into view on open
   useEffect(() => {
     if (!open) return;
     const selectedIdx = options.findIndex((opt) => opt.value === value);
 
-    const frame = requestAnimationFrame(() => {
-      const isDesktop = window.innerWidth >= 768;
+    const focusInitialTarget = () => {
+      const mobile = isViewportMobile();
       const focusAlreadyInside = popoverRef.current?.contains(document.activeElement) ?? false;
       if (!focusAlreadyInside) {
-        if (searchable && isDesktop) {
-          searchInputRef.current?.focus();
-        } else if (!isDesktop) {
+        if (mobile) {
           popoverRef.current?.focus();
+        } else if (searchable) {
+          searchInputRef.current?.focus();
         }
       }
       if (selectedIdx >= 0) {
         scrollOptionIntoView(selectedIdx);
       }
-    });
+    };
+
+    focusInitialTarget();
+    const frame = requestAnimationFrame(focusInitialTarget);
 
     return () => cancelAnimationFrame(frame);
-    // Hanya jalankan sekali saat popover/modal dibuka
+    // Run only when menu transitions open
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Efek 3: Navigasi keyboard (Escape, ArrowUp/Down + auto-scroll, Enter, Tab focus-trap modal)
+  // Capture-phase listener runs before outer SheetDialog bubble handlers.
   useEffect(() => {
     if (!open) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
+        e.stopImmediatePropagation();
         closeMenu();
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
+        e.stopImmediatePropagation();
         setHighlightIdx((prev) => {
           const next = filteredOptions.length === 0 ? -1 : (prev + 1) % filteredOptions.length;
           scrollOptionIntoView(next);
@@ -244,6 +268,7 @@ export function ThemedSelect({
         });
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
+        e.stopImmediatePropagation();
         setHighlightIdx((prev) => {
           const next =
             filteredOptions.length === 0 ? -1 : prev <= 0 ? filteredOptions.length - 1 : prev - 1;
@@ -251,33 +276,68 @@ export function ThemedSelect({
           return next;
         });
       } else if (e.key === "Enter") {
-        if (highlightIdx >= 0 && highlightIdx < filteredOptions.length) {
+        const activeEl = document.activeElement;
+        const isControlButton =
+          activeEl instanceof HTMLButtonElement &&
+          activeEl.getAttribute("role") !== "option" &&
+          (popoverRef.current?.contains(activeEl) ?? false);
+        if (!isControlButton && highlightIdx >= 0 && highlightIdx < filteredOptions.length) {
           e.preventDefault();
+          e.stopImmediatePropagation();
           const chosen = filteredOptions[highlightIdx];
           if (chosen) selectValue(chosen.value);
         }
-      } else if (e.key === "Tab" && isMobileViewport && popoverRef.current) {
-        const focusables = popoverRef.current.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        );
-        if (focusables.length === 0) return;
-        const first = focusables[0]!;
-        const last = focusables[focusables.length - 1]!;
-        const activeEl = document.activeElement as HTMLElement | null;
-        if (e.shiftKey) {
-          if (!activeEl || activeEl === first || !popoverRef.current.contains(activeEl)) {
+      } else if (e.key === "Tab" && popoverRef.current) {
+        const focusables = getOverlayFocusables(popoverRef.current);
+        const activeEl =
+          document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+        if (isMobileViewport) {
+          e.stopImmediatePropagation();
+          if (focusables.length === 0) {
             e.preventDefault();
-            last.focus();
+            popoverRef.current.focus();
+            return;
           }
-        } else if (!activeEl || activeEl === last || !popoverRef.current.contains(activeEl)) {
-          e.preventDefault();
-          first.focus();
+          const first = focusables[0]!;
+          const last = focusables[focusables.length - 1]!;
+          if (e.shiftKey) {
+            if (
+              !activeEl ||
+              activeEl === popoverRef.current ||
+              activeEl === first ||
+              !popoverRef.current.contains(activeEl)
+            ) {
+              e.preventDefault();
+              last.focus();
+            }
+          } else if (
+            !activeEl ||
+            activeEl === popoverRef.current ||
+            activeEl === last ||
+            !popoverRef.current.contains(activeEl)
+          ) {
+            e.preventDefault();
+            first.focus();
+          }
+        } else if (activeEl && popoverRef.current.contains(activeEl)) {
+          e.stopImmediatePropagation();
+          const first = focusables[0];
+          const last = focusables[focusables.length - 1];
+          if (!first || !last || (e.shiftKey ? activeEl === first : activeEl === last)) {
+            e.preventDefault();
+            closeMenu();
+          }
+        } else {
+          setOpen(false);
+          setQuery("");
+          setHighlightIdx(-1);
         }
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [
     open,
     filteredOptions,
@@ -313,16 +373,21 @@ export function ThemedSelect({
                 searchPlaceholder ??
                 pickLang(language, "Cari standar ternak", "Search livestock standard")
               }
-              className="min-h-9 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-sunken)] pr-8 pl-8 text-xs font-medium text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus-visible:border-[var(--color-primary)] focus-visible:bg-[var(--bg-surface-elevated)] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-[var(--focus-ring)]"
+              className={cn(
+                "min-h-11 w-full border pr-11 pl-8 text-xs font-medium text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus-visible:border-[var(--color-primary)] focus-visible:bg-[var(--bg-surface-elevated)] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-[var(--focus-ring)] md:min-h-9 md:pr-8",
+                isAntiSlop
+                  ? "rounded-md border-[var(--border-strong)] bg-[var(--bg-surface-elevated)]"
+                  : "rounded-lg border-[var(--border-subtle)] bg-[var(--bg-sunken)]",
+              )}
             />
             {query && (
               <button
                 type="button"
                 onClick={() => setQuery("")}
                 aria-label={pickLang(language, "Hapus pencarian", "Clear search")}
-                className="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer rounded p-0.5 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                className="absolute top-1/2 right-1 inline-flex min-h-11 min-w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] md:right-2 md:min-h-7 md:min-w-7"
               >
-                <X className="h-3.5 w-3.5" />
+                <X className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             )}
           </div>
@@ -374,9 +439,12 @@ export function ThemedSelect({
                       onClick={() => selectValue(opt.value)}
                       onMouseEnter={() => setHighlightIdx(flatIndex)}
                       className={cn(
-                        "flex min-h-10 w-full cursor-pointer items-center justify-between gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition-colors md:min-h-8 md:py-1.5",
+                        "flex min-h-11 w-full cursor-pointer items-center justify-between gap-2.5 px-2.5 py-2 text-left text-xs transition-colors md:min-h-8 md:py-1.5",
+                        isAntiSlop ? "rounded-md" : "rounded-lg",
                         isSelected
-                          ? "bg-[var(--primary-soft)] font-bold text-[var(--color-primary)] ring-1 ring-[var(--border-subtle)]"
+                          ? isAntiSlop
+                            ? "border border-[var(--color-primary)] bg-[var(--primary-soft)] font-bold text-[var(--text-primary)]"
+                            : "bg-[var(--primary-soft)] font-bold text-[var(--color-primary)] ring-1 ring-[var(--border-subtle)]"
                           : isHighlighted
                             ? "bg-[var(--bg-sunken)] text-[var(--text-primary)]"
                             : "text-[var(--text-primary)] hover:bg-[var(--bg-sunken)]",
@@ -417,17 +485,26 @@ export function ThemedSelect({
       ? createPortal(
           isMobileViewport ? (
             <div
+              data-themed-select-overlay="true"
               className="fixed inset-0 z-[70] flex items-end justify-center bg-black/55"
               role="dialog"
               aria-modal="true"
               aria-label={modalTitle ?? ariaLabel}
-              onClick={closeMenu}
+              onClick={(e) => {
+                e.stopPropagation();
+                closeMenu();
+              }}
             >
               <div
                 ref={popoverRef}
                 tabIndex={-1}
                 onClick={(e) => e.stopPropagation()}
-                className="flex max-h-[82dvh] w-full flex-col overflow-hidden rounded-t-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface-elevated)] text-[var(--text-primary)] shadow-[0_-18px_48px_-12px_rgba(0,0,0,0.45)] focus:outline-none"
+                className={cn(
+                  "flex max-h-[82dvh] w-full flex-col overflow-hidden border bg-[var(--bg-surface-elevated)] text-[var(--text-primary)] focus:outline-none",
+                  isAntiSlop
+                    ? "rounded-t-xl border-[var(--border-strong)] shadow-[0_12px_32px_-8px_rgba(0,0,0,0.28)]"
+                    : "rounded-t-2xl border-[var(--border-subtle)] shadow-[0_-18px_48px_-12px_rgba(0,0,0,0.45)]",
+                )}
               >
                 <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] bg-[var(--bg-surface-elevated)] px-4 py-3">
                   <h2 className="min-w-0 truncate text-sm font-bold text-[var(--text-primary)]">
@@ -437,9 +514,14 @@ export function ThemedSelect({
                     type="button"
                     onClick={closeMenu}
                     aria-label={pickLang(language, "Tutup pilihan", "Close selector")}
-                    className="neu-pill-btn inline-flex min-h-9 min-w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-[var(--text-secondary)]"
+                    className={cn(
+                      "inline-flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]",
+                      isAntiSlop
+                        ? "rounded-lg border border-[var(--border-strong)] bg-[var(--bg-surface)] text-[var(--text-primary)] hover:bg-[var(--bg-sunken)]"
+                        : "neu-pill-btn rounded-full text-[var(--text-secondary)]",
+                    )}
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-4 w-4" aria-hidden="true" />
                   </button>
                 </div>
                 {renderOptionsBody()}
@@ -448,6 +530,7 @@ export function ThemedSelect({
           ) : (
             <div
               ref={popoverRef}
+              data-themed-select-overlay="true"
               style={
                 popoverStyle
                   ? {
@@ -463,7 +546,12 @@ export function ThemedSelect({
                       maxHeight: "340px",
                     }
               }
-              className="fixed z-[70] flex flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-elevated)] text-[var(--text-primary)] shadow-[0_20px_44px_-12px_rgba(0,0,0,0.34),0_4px_14px_-4px_rgba(0,0,0,0.16)]"
+              className={cn(
+                "fixed z-[70] flex flex-col overflow-hidden rounded-xl border bg-[var(--bg-surface-elevated)] text-[var(--text-primary)]",
+                isAntiSlop
+                  ? "border-[var(--border-strong)] shadow-[0_12px_28px_-6px_rgba(0,0,0,0.28)]"
+                  : "border-[var(--border-subtle)] shadow-[0_20px_44px_-12px_rgba(0,0,0,0.34),0_4px_14px_-4px_rgba(0,0,0,0.16)]",
+              )}
             >
               {renderOptionsBody()}
             </div>
@@ -491,13 +579,16 @@ export function ThemedSelect({
         }}
         title={selectedOption?.label ?? placeholder ?? ariaLabel}
         className={cn(
-          "inline-flex min-h-9 w-full min-w-0 max-w-full cursor-pointer items-center justify-between gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-sunken)] px-2.5 py-1.5 text-left text-xs font-semibold text-[var(--text-primary)] shadow-[var(--shadow-neu-pressed)] transition-[transform,border-color,background-color] duration-150 hover:border-[var(--border-strong)] hover:bg-[var(--bg-surface-elevated)] active:scale-[0.985] focus-visible:border-[var(--color-primary)] focus-visible:bg-[var(--bg-surface-elevated)] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-50 md:min-h-7 md:py-1 motion-reduce:transform-none",
+          "inline-flex min-h-11 w-full min-w-0 max-w-full cursor-pointer items-center justify-between gap-1.5 border px-2.5 py-1.5 text-left text-xs font-semibold text-[var(--text-primary)] transition-[transform,border-color,background-color] duration-150 focus-visible:border-[var(--color-primary)] focus-visible:bg-[var(--bg-surface-elevated)] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-50 md:py-1 motion-reduce:transform-none",
+          isAntiSlop
+            ? "rounded-md border-[var(--border-strong)] bg-[var(--bg-surface-elevated)] hover:border-[var(--color-primary)] md:min-h-8"
+            : "rounded-lg border-[var(--border-subtle)] bg-[var(--bg-sunken)] shadow-[var(--shadow-neu-pressed)] hover:border-[var(--border-strong)] hover:bg-[var(--bg-surface-elevated)] active:scale-[0.985] md:min-h-7",
           open && "border-[var(--color-primary)] bg-[var(--bg-surface-elevated)]",
           className,
         )}
       >
         <span className="min-w-0 flex-1 truncate">
-          {selectedOption?.label ?? placeholder ?? "—"}
+          {selectedOption?.label ?? placeholder ?? (isAntiSlop ? "-" : "—")}
         </span>
         <ChevronDown
           aria-hidden="true"

@@ -45,7 +45,9 @@ export function OptimizationModeSelector({
           onChange(parsed as OptimizationMode);
         }
       }}
-      className={className ?? "h-7 min-h-7 w-full py-0 text-[11px] md:w-auto md:min-w-40"}
+      className={
+        className ?? "min-h-11 w-full py-0 text-[11px] md:h-7 md:min-h-7 md:w-auto md:min-w-40"
+      }
     />
   );
 }

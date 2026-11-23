@@ -9,11 +9,15 @@ Tipe kanonik didefinisikan di [`src/types/index.ts`](../src/types/index.ts). Dok
 - `NutrientTier`: `"basic" | "amino_acid" | "fiber_carb" | "mineral_electrolyte" | "anf_physical"`
 - `IngredientCategory`: `"energy" | "protein" | "mineral" | "premix" | "forage" | "additive" | "enzyme"`
 - `FeedClassCode`: `1 | 2 | 3 | 4 | 5 | 6 | 7 | 8` (8 kelas klasifikasi bahan pakan standar IFN / NRC / Hartadi 1980 Tabel 7: `1=Hijauan Kering`, `2=Hijauan Segar`, `3=Silase`, `4=Sumber Energi`, `5=Sumber Protein`, `6=Sumber Mineral`, `7=Sumber Vitamin`, `8=Aditif`)
-- `LivestockSpecies`: `"broiler" | "layer" | "buras" | "duck" | "quail" | "beef" | "dairy" | "goat" | "sheep" | "swine" | "fish" | "custom"`
+- `LivestockSpecies`: `"broiler" | "layer" | "buras" | "duck" | "quail" | "turkey" | "goose" | "cattle_beef" | "cattle_dairy" | "buffalo" | "goat" | "sheep" | "goat_sheep" | "swine" | "fish" | "custom"`
 - `OptimizationMode`: `1 | 2 | 3 | 4 | 5` (`1=Hemat`, `2=Agak Hemat`, `3=Seimbang`, `4=Presisi`, `5=Presisi Tinggi`)
 - `TargetInputMode`: `"range" | "single"` (`"range"` = batas Min–Max standar; `"single"` = pendekatan presisi 1 angka dengan SK batas maksimal ketat)
 - `FormulationStatus`: `"optimal" | "near_feasible" | "infeasible" | "error"`
 - `NutrientStatus`: `"met" | "below_min" | "above_max" | "unconstrained"`
+- `UiMode`: `"biasa" | "enhanced" | "anti-slop"` (default `"enhanced"` pada `DEFAULT_PREFERENCES`)
+- `ThemePaletteId`: `"original-default" | "template-01" | "template-03" | "template-04" | "template-05"`
+- `ThemeModeSetting`: `"light" | "dark" | "system"`
+- `TableViewTier`: `"basic" | "standard" | "advanced"`
 
 ## `Nutrient`
 
@@ -130,10 +134,11 @@ Output hasil formulasi yang dihasilkan oleh engine LP HiGHS WASM di Web Worker (
 - `Recipe`: format `.feed.json` berversi (`schemaVersion: 1`, `id`, `name`, `notes?`, `ingredients`, `requirement`, `config?`, `result`, `createdAt`, `updatedAt`)
 - `RenderingEngineMode`: `"ultra" | "balanced" | "crisp"` (profil kualitas grafis: `ultra` = `Smooth (120 FPS)` dengan blur akrilik & glow, `crisp` = `Standard (Biasa)` hemat daya tanpa blur)
 - `MotionEngineMode`: `"gpu_flip" | "css_native"` (pilihan engine animasi `120 FPS` berbasis GPU `layoutId`/crossfade vs transisi CSS ringan)
-- `UserPreferences`: preferensi antarmuka (`language`, `theme`, `themePalette?` [`original-default` | `template-01` | `template-03` | `template-04` | `template-05`], `themeModeSetting?` [`light` | `dark` | `system`], `amoledPureBlack?`, `uiEnhancer?`, `renderingEngine?`, `motionEngine?`, `glassBlurPx?` [`0..32`], `glowIntensityPct?` [`0..150`], `defaultBasis`, `defaultBatchKg`, `zeroInclusionDefaultPct`, `simpleMode?`, `decimalPlaces?` [`0 | 1 | 2`, default `0` dengan _Smart Micro Floor_ `>= 2` desimal bagi nutrien mikro `< 2%`], `tableViewTier?` [`"basic" | "standard" | "advanced"`])
+- `UserPreferences`: preferensi antarmuka (`language`, `theme`, `themePalette?` [`original-default` | `template-01` | `template-03` | `template-04` | `template-05`], `themeModeSetting?` [`light` | `dark` | `system`], `amoledPureBlack?`, `uiMode?` [`"biasa" | "enhanced" | "anti-slop"`, default `"enhanced"`], `uiEnhancer?` [cermin kompatibilitas balik: `true` hanya saat `uiMode === "enhanced"`], `renderingEngine?`, `motionEngine?`, `glassBlurPx?` [`0..32`], `glowIntensityPct?` [`0..150`], `defaultBasis`, `defaultBatchKg`, `zeroInclusionDefaultPct`, `simpleMode?`, `decimalPlaces?` [`0 | 1 | 2`, default `0` dengan _Smart Micro Floor_ `>= 2` desimal bagi nutrien mikro `< 2%`], `tableViewTier?` [`"basic" | "standard" | "advanced"`])
 
 ## Penyimpanan IndexedDB & Validasi Batas Sistem
 
 - **Database:** `"openformul-db"` v1 (`src/storage/db.ts` via `idb`) dengan 5 _object store_: `ingredients`, `requirements`, `recipes`, `active_session` (`id: "current"`), dan `preferences` (`id: "user"`), lengkap dengan pemulihan baris rusak, backfill non-destruktif kolom `nutrients.betn` pada data tersimpan lama, dan fallback memori otomatis jika IndexedDB tidak tersedia.
 - **Validasi Batas Sistem (`src/utils/validators.ts`):** memastikan `dryMatter ∈ (0, 100]`, `pricePerKg >= 0`, nilai nutrien/inklusi berhingga & valid (`null` tetap dibedakan dari `0`), serta sanitasi karakter kontrol sebelum masuk ke state/domain.
-- **Impor & Ekspor Offline:** transfer portabel `.feed.json` (`schemaVersion: 1`), impor CSV partial-merge (`src/utils/ingredientCsvImport.ts` dengan alias header seperti `Harga/kg`, `PK (%)`, `BK %`), TSV Multi-Cell Paste (`src/utils/tsvPaste.ts`), generator OOXML `.xlsx` & CSV UTF-8 BOM (`src/storage/exportCsvXlsx.ts`), serta PDF 1.4 offline (`src/storage/exportPdf.ts` dengan _safety status gate_ pada mode `batch_only`).
+- **Persistensi Tema & Validasi `UiMode`:** `validateUserPreferences` (`src/utils/validators.ts`) memvalidasi `uiMode` secara ketat terhadap `["biasa", "enhanced", "anti-slop"]` sekaligus mempertahankan pembacaan `uiEnhancer` lama. Pada lapisan `localStorage` & hidrasi pra-lukis `index.html`, preferensi dibaca berurutan dari `openformu-ui-mode` → `openformul-ui-mode` → `openformu-theme-enhancer` / `openformul-theme-enhancer` (`"false"` → `"biasa"`, `"true"` → `"enhanced"`, kosong → `"enhanced"`).
+- **Impor & Ekspor Offline:** transfer portabel `.feed.json` (`schemaVersion: 1`), impor CSV partial-merge (`src/utils/ingredientCsvImport.ts` dengan alias header seperti `Harga/kg`, `PK (%)`, `BK %`), TSV Multi-Cell Paste (`src/utils/tsvPaste.ts`), generator OOXML `.xlsx` 4-sheet formulasi (`generateFormulationXlsx` dengan sheet `Matriks Nutrien Bahan` 25 parameter, takaran 2-versi `xx,xxx kg` & bulat, serta konsumsi harian BK/As-Fed) + 2-sheet database bahan (`generateIngredientDatabaseXlsx`) & CSV UTF-8 BOM (`src/storage/exportCsvXlsx.ts`), serta PDF 1.4 offline ber-`Head Kop` & `Tail Kop` (`src/storage/exportPdf.ts` dengan _safety status gate_ pada mode `batch_only`).

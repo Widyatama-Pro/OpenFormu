@@ -3,7 +3,9 @@ import { FileText, FolderOpen, Plus, Trash2 } from "lucide-react";
 import { MOCK_NUTRIENTS } from "../../data/mock-state";
 import { pickLang } from "../../i18n";
 import { generateRecipePdf, sanitizeFilenameSlug } from "../../storage";
+import { useOptionalThemeContext } from "../../theme";
 import type { AppLanguage, Nutrient, Recipe } from "../../types";
+import { cn } from "../../utils/cn";
 import { downloadBinaryFile } from "../../utils/download";
 import type { ValidationResult } from "../../utils/validators";
 import { Badge } from "../ui/Badge";
@@ -38,19 +40,38 @@ export const SavedRecipesPage = memo(function SavedRecipesPage({
   onOpenExport,
   onDeleteRecipe,
 }: SavedRecipesPageProps) {
-  const [notice, setNotice] = useState<string | null>(null);
+  const isAntiSlop = useOptionalThemeContext()?.uiMode === "anti-slop";
+  const [notice, setNotice] = useState<{
+    readonly tone: "success" | "error";
+    readonly text: string;
+  } | null>(null);
 
   const handleExportRecipePdf = (recipe: Recipe) => {
-    const bytes = generateRecipePdf({ recipe, nutrientsCatalog, decimalPlaces });
-    const filename = `${sanitizeFilenameSlug(recipe.name)}.pdf`;
-    downloadBinaryFile(bytes, filename, "application/pdf");
-    setNotice(
-      pickLang(
-        language,
-        `Resep "${recipe.name}" berhasil diekspor ke ${filename}.`,
-        `Recipe "${recipe.name}" exported to ${filename}.`,
-      ),
-    );
+    try {
+      const bytes = generateRecipePdf({ recipe, nutrientsCatalog, decimalPlaces });
+      const filename = `${sanitizeFilenameSlug(recipe.name)}.pdf`;
+      downloadBinaryFile(bytes, filename, "application/pdf");
+      setNotice({
+        tone: "success",
+        text: pickLang(
+          language,
+          `Resep "${recipe.name}" berhasil diekspor ke ${filename}.`,
+          `Recipe "${recipe.name}" exported to ${filename}.`,
+        ),
+      });
+    } catch (err) {
+      setNotice({
+        tone: "error",
+        text:
+          err instanceof Error
+            ? err.message
+            : pickLang(
+                language,
+                `Gagal mengekspor PDF untuk resep "${recipe.name}".`,
+                `Failed to export PDF for recipe "${recipe.name}".`,
+              ),
+      });
+    }
   };
 
   return (
@@ -71,11 +92,11 @@ export const SavedRecipesPage = memo(function SavedRecipesPage({
 
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" size="sm" onClick={onOpenExport}>
-            <FileText className="h-3.5 w-3.5 text-[var(--status-success)]" />
+            <FileText className="h-3.5 w-3.5 text-[var(--status-success)]" aria-hidden="true" />
             <span>{pickLang(language, "Ekspor PDF Aktif", "Export Current PDF")}</span>
           </Button>
           <Button variant="primary" size="sm" onClick={onOpenSaveCurrent}>
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
             <span>{pickLang(language, "Simpan Sesi Saat Ini", "Save Current Session")}</span>
           </Button>
         </div>
@@ -83,14 +104,20 @@ export const SavedRecipesPage = memo(function SavedRecipesPage({
 
       {notice && (
         <div
-          role="status"
-          className="flex items-center justify-between gap-2 rounded-xl border border-[var(--status-success-border)] bg-[var(--status-success-soft)] px-3.5 py-2 text-xs font-medium text-[var(--status-success)]"
+          role={notice.tone === "error" ? "alert" : "status"}
+          className={cn(
+            "flex items-center justify-between gap-2 border px-3.5 py-2 text-xs font-medium",
+            isAntiSlop ? "rounded-lg" : "rounded-xl",
+            notice.tone === "error"
+              ? "border-[var(--status-danger-border)] bg-[var(--status-danger-soft)] text-[var(--status-danger)]"
+              : "border-[var(--status-success-border)] bg-[var(--status-success-soft)] text-[var(--status-success)]",
+          )}
         >
-          <span>{notice}</span>
+          <span>{notice.text}</span>
           <button
             type="button"
             onClick={() => setNotice(null)}
-            className="cursor-pointer text-[11px] font-bold underline"
+            className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded px-2.5 text-[11px] font-bold underline md:min-h-0 md:min-w-0 md:px-1"
           >
             {pickLang(language, "Tutup", "Close")}
           </button>
@@ -99,11 +126,17 @@ export const SavedRecipesPage = memo(function SavedRecipesPage({
 
       {recipes.length === 0 ? (
         <Card interactive={false} className="p-8 text-center text-xs text-[var(--text-secondary)]">
-          {pickLang(
-            language,
-            'Belum ada resep tersimpan. Klik "Simpan Sesi Saat Ini" untuk menyimpan racikan aktif.',
-            'No saved recipes yet. Click "Save Current Session" to save your active ration.',
-          )}
+          <p>
+            {pickLang(
+              language,
+              'Belum ada resep tersimpan. Klik "Simpan Sesi Saat Ini" untuk menyimpan racikan aktif.',
+              'No saved recipes yet. Click "Save Current Session" to save your active ration.',
+            )}
+          </p>
+          <Button variant="primary" size="sm" onClick={onOpenSaveCurrent} className="mt-3">
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>{pickLang(language, "Simpan Sesi Saat Ini", "Save Current Session")}</span>
+          </Button>
         </Card>
       ) : (
         <Card interactive={false} className="selectable-panel overflow-hidden">
@@ -162,18 +195,21 @@ export const SavedRecipesPage = memo(function SavedRecipesPage({
                             variant="secondary"
                             size="sm"
                             onClick={() => handleExportRecipePdf(r)}
-                            className="min-h-7 shrink-0 px-2.5 text-[11px] whitespace-nowrap md:min-h-7"
+                            className="min-h-11 shrink-0 px-3 text-[11px] whitespace-nowrap md:min-h-7 md:px-2.5"
                           >
-                            <FileText className="h-3.5 w-3.5 shrink-0 text-[var(--status-success)]" />
+                            <FileText
+                              className="h-3.5 w-3.5 shrink-0 text-[var(--status-success)]"
+                              aria-hidden="true"
+                            />
                             <span>{pickLang(language, "Ekspor PDF", "Export PDF")}</span>
                           </Button>
                           <Button
                             variant="primary"
                             size="sm"
                             onClick={() => onLoadRecipe(r.id)}
-                            className="min-h-7 shrink-0 px-2.5 text-[11px] whitespace-nowrap md:min-h-7"
+                            className="min-h-11 shrink-0 px-3 text-[11px] whitespace-nowrap md:min-h-7 md:px-2.5"
                           >
-                            <FolderOpen className="h-3.5 w-3.5 shrink-0" />
+                            <FolderOpen className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                             <span>{pickLang(language, "Buka", "Open")}</span>
                           </Button>
                           {onDeleteRecipe && (
@@ -182,9 +218,9 @@ export const SavedRecipesPage = memo(function SavedRecipesPage({
                               size="sm"
                               aria-label={`${pickLang(language, "Hapus resep", "Delete recipe")} ${r.name}`}
                               onClick={() => onDeleteRecipe(r.id)}
-                              className="min-h-7 px-2 text-[var(--status-danger)] hover:bg-[var(--status-danger-soft)] md:min-h-7"
+                              className="min-h-11 min-w-11 px-2.5 text-[var(--status-danger)] hover:bg-[var(--status-danger-soft)] md:min-h-7 md:min-w-0 md:px-2"
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                             </Button>
                           )}
                         </div>

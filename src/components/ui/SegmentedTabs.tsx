@@ -7,9 +7,10 @@ import { AnimatedTextSwap } from "./AnimatedText";
 export interface TabOption<T extends string> {
   readonly value: T;
   readonly label: string;
-  /** Label ringkas opsional khusus layar mobile (< sm) agar seluruh tab muat tanpa terpotong. */
+  /** Compact mobile label (< sm) so all tabs fit without horizontal truncation. */
   readonly mobileLabel?: string | undefined;
   readonly badge?: string | number | undefined;
+  readonly panelId?: string | undefined;
 }
 
 export interface SegmentedTabsProps<T extends string> {
@@ -17,12 +18,10 @@ export interface SegmentedTabsProps<T extends string> {
   readonly value: T;
   readonly onChange: (next: T) => void;
   readonly ariaLabel: string;
-  /** Bila aktif, semua tab muat proporsional dalam lebar layar HP tanpa overflow horizontal. */
   readonly fitMobile?: boolean | undefined;
   readonly className?: string | undefined;
 }
 
-/** Kontrol tab tersegmentasi 120 FPS dengan GPU shared-layout sliding pill & dukungan wheel/arrow scroll. */
 export function SegmentedTabs<T extends string>({
   options,
   value,
@@ -34,7 +33,8 @@ export function SegmentedTabs<T extends string>({
   const pillId = useId();
   const listRef = useRef<HTMLDivElement | null>(null);
   const themeCtx = useOptionalThemeContext();
-  const useGpuFlip = (themeCtx?.motionEngine ?? "gpu_flip") === "gpu_flip";
+  const isAntiSlop = themeCtx?.uiMode === "anti-slop";
+  const useGpuFlip = !isAntiSlop && (themeCtx?.motionEngine ?? "gpu_flip") === "gpu_flip";
 
   const handleWheel = useCallback((event: WheelEvent<HTMLDivElement>) => {
     const el = listRef.current;
@@ -47,19 +47,26 @@ export function SegmentedTabs<T extends string>({
   const handleKeyDown = useCallback(
     (idx: number, event: KeyboardEvent<HTMLButtonElement>) => {
       if (options.length <= 1) return;
+      let nextIdx: number | null = null;
       if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
-        event.preventDefault();
         const delta = event.key === "ArrowRight" ? 1 : -1;
-        const nextIdx = (idx + delta + options.length) % options.length;
-        const nextOpt = options[nextIdx];
-        if (nextOpt) {
-          onChange(nextOpt.value);
-          const buttons = listRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
-          const nextBtn = buttons?.[nextIdx];
-          nextBtn?.focus();
-          if (typeof nextBtn?.scrollIntoView === "function") {
-            nextBtn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-          }
+        nextIdx = (idx + delta + options.length) % options.length;
+      } else if (event.key === "Home") {
+        nextIdx = 0;
+      } else if (event.key === "End") {
+        nextIdx = options.length - 1;
+      }
+      if (nextIdx === null) return;
+
+      event.preventDefault();
+      const nextOpt = options[nextIdx];
+      if (nextOpt) {
+        onChange(nextOpt.value);
+        const buttons = listRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+        const nextBtn = buttons?.[nextIdx];
+        nextBtn?.focus();
+        if (typeof nextBtn?.scrollIntoView === "function") {
+          nextBtn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
         }
       }
     },
@@ -73,7 +80,10 @@ export function SegmentedTabs<T extends string>({
       aria-label={ariaLabel}
       onWheel={handleWheel}
       className={cn(
-        "acrylic-control-capsule rounded-xl p-1",
+        "p-1",
+        isAntiSlop
+          ? "rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-sunken)]"
+          : "acrylic-control-capsule rounded-xl",
         fitMobile
           ? "flex w-full items-center justify-between gap-0.5 sm:inline-flex sm:w-auto sm:gap-1"
           : "custom-scrollbar inline-flex w-full overflow-x-auto",
@@ -87,7 +97,9 @@ export function SegmentedTabs<T extends string>({
             key={opt.value}
             type="button"
             role="tab"
+            tabIndex={active ? 0 : -1}
             aria-selected={active}
+            aria-controls={opt.panelId}
             onKeyDown={(e) => handleKeyDown(idx, e)}
             onClick={(e) => {
               onChange(opt.value);
@@ -105,13 +117,20 @@ export function SegmentedTabs<T extends string>({
               }
             }}
             className={cn(
-              "elastic-size-box relative inline-flex cursor-pointer items-center justify-center rounded-lg font-semibold transition-[transform,color] duration-150 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] motion-reduce:transform-none",
+              "elastic-size-box relative inline-flex cursor-pointer items-center justify-center transition-[transform,color] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] motion-reduce:transform-none",
+              isAntiSlop ? "rounded-md" : "rounded-lg active:scale-[0.98]",
               fitMobile
-                ? "min-h-10 min-w-0 flex-auto gap-1 px-1.5 py-1 text-center text-[11px] leading-none whitespace-nowrap sm:min-h-7 sm:flex-initial sm:gap-1.5 sm:px-2.5 sm:text-xs"
-                : "min-h-9 flex-1 shrink-0 gap-1.5 px-2.5 py-1 text-xs whitespace-nowrap md:min-h-7",
+                ? isAntiSlop
+                  ? "min-h-11 min-w-0 flex-auto gap-1 px-1.5 py-1 text-center text-[11px] leading-none whitespace-nowrap sm:min-h-8 sm:flex-initial sm:gap-1.5 sm:px-2.5 sm:text-xs"
+                  : "min-h-11 min-w-0 flex-auto gap-1 px-1.5 py-1 text-center text-[11px] leading-none whitespace-nowrap sm:min-h-7 sm:flex-initial sm:gap-1.5 sm:px-2.5 sm:text-xs"
+                : isAntiSlop
+                  ? "min-h-11 flex-1 shrink-0 gap-1.5 px-2.5 py-1 text-xs whitespace-nowrap md:min-h-8"
+                  : "min-h-11 flex-1 shrink-0 gap-1.5 px-2.5 py-1 text-xs whitespace-nowrap md:min-h-7",
               active
-                ? "text-[var(--text-primary)]"
-                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                ? isAntiSlop
+                  ? "font-bold text-[var(--text-primary)]"
+                  : "font-semibold text-[var(--text-primary)]"
+                : "font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
             )}
           >
             {active &&
@@ -125,7 +144,12 @@ export function SegmentedTabs<T extends string>({
               ) : (
                 <span
                   aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 rounded-lg bg-[var(--bg-surface-elevated)] shadow-[var(--shadow-neu-flat)]"
+                  className={cn(
+                    "pointer-events-none absolute inset-0",
+                    isAntiSlop
+                      ? "rounded-md border border-[var(--border-strong)] bg-[var(--bg-surface-elevated)]"
+                      : "rounded-lg bg-[var(--bg-surface-elevated)] shadow-[var(--shadow-neu-flat)]",
+                  )}
                 />
               ))}
 
@@ -147,7 +171,8 @@ export function SegmentedTabs<T extends string>({
               {opt.badge !== undefined && (
                 <span
                   className={cn(
-                    "rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
+                    "px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
+                    isAntiSlop ? "rounded-md" : "rounded-full",
                     active
                       ? "bg-[var(--status-success-soft)] text-[var(--status-success)]"
                       : "bg-[var(--bg-surface)] text-[var(--text-secondary)]",

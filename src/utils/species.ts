@@ -1,9 +1,19 @@
 export type CommodityGroup = "broiler" | "layer" | "cattle_beef" | "cattle_dairy" | "other";
 
-const POULTRY_SPECIES = new Set(["broiler", "layer", "buras", "duck", "poultry"]);
+const POULTRY_SPECIES = new Set([
+  "broiler",
+  "layer",
+  "buras",
+  "duck",
+  "quail",
+  "turkey",
+  "goose",
+  "poultry",
+]);
 const RUMINANT_SPECIES = new Set([
   "cattle_beef",
   "cattle_dairy",
+  "buffalo",
   "sheep",
   "goat",
   "goat_sheep",

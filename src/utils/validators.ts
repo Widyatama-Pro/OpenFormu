@@ -21,6 +21,7 @@ import type {
   TableViewTier,
   ThemeModeSetting,
   ThemePaletteId,
+  UiMode,
   UserPreferences,
   ZeroInclusionRule,
 } from "../types";
@@ -769,6 +770,7 @@ const VALID_THEME_PALETTES = new Set<ThemePaletteId>([
   "template-05",
 ]);
 const VALID_THEME_MODE_SETTINGS = new Set<ThemeModeSetting>(["light", "dark", "system"]);
+const VALID_UI_MODES = new Set<UiMode>(["biasa", "enhanced", "anti-slop"]);
 
 export function validateUserPreferences(raw: unknown): ValidationResult<UserPreferences> {
   if (!isPlainObject(raw)) {
@@ -788,6 +790,10 @@ export function validateUserPreferences(raw: unknown): ValidationResult<UserPref
       : undefined;
   const amoledPureBlack =
     typeof raw.amoledPureBlack === "boolean" ? raw.amoledPureBlack : undefined;
+  const uiMode: UiMode | undefined =
+    typeof raw.uiMode === "string" && VALID_UI_MODES.has(raw.uiMode as UiMode)
+      ? (raw.uiMode as UiMode)
+      : undefined;
   const uiEnhancer = typeof raw.uiEnhancer === "boolean" ? raw.uiEnhancer : undefined;
   const renderingEngine: RenderingEngineMode | undefined =
     raw.renderingEngine === "ultra" ||
@@ -825,6 +831,7 @@ export function validateUserPreferences(raw: unknown): ValidationResult<UserPref
       ...(themePalette !== undefined ? { themePalette } : {}),
       ...(themeModeSetting !== undefined ? { themeModeSetting } : {}),
       ...(amoledPureBlack !== undefined ? { amoledPureBlack } : {}),
+      ...(uiMode !== undefined ? { uiMode } : {}),
       ...(uiEnhancer !== undefined ? { uiEnhancer } : {}),
       ...(renderingEngine !== undefined ? { renderingEngine } : {}),
       ...(motionEngine !== undefined ? { motionEngine } : {}),

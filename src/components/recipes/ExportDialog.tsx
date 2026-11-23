@@ -1,8 +1,13 @@
 import { useState } from "react";
-import { AlertTriangle, FileText, Printer } from "lucide-react";
+import { AlertTriangle, FileSpreadsheet, FileText, Printer } from "lucide-react";
 import { MOCK_NUTRIENTS } from "../../data/mock-state";
 import { pickLang } from "../../i18n";
-import { generateFormulationPdf, sanitizeFilenameSlug } from "../../storage";
+import {
+  generateFormulationPdf,
+  generateFormulationXlsx,
+  sanitizeFilenameSlug,
+} from "../../storage";
+import { useOptionalThemeContext } from "../../theme";
 import type {
   AppLanguage,
   FormulationConfig,
@@ -11,6 +16,7 @@ import type {
   Nutrient,
   Requirement,
 } from "../../types";
+import { cn } from "../../utils/cn";
 import { downloadBinaryFile } from "../../utils/download";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
@@ -45,6 +51,7 @@ export function ExportDialog({
   decimalPlaces = 0,
   language = "id",
 }: ExportDialogProps) {
+  const isAntiSlop = useOptionalThemeContext()?.uiMode === "anti-slop";
   const [notice, setNotice] = useState<{
     readonly tone: "success" | "error";
     readonly text: string;
@@ -117,6 +124,37 @@ export function ExportDialog({
     }
   };
 
+  const handleDownloadXlsxFull = () => {
+    try {
+      const bytes = generateFormulationXlsx({
+        recipeName: effectiveTitle,
+        ingredients,
+        nutrientsCatalog,
+        requirement,
+        result,
+        decimalPlaces,
+      });
+      downloadBinaryFile(
+        bytes,
+        `${slug}-formulasi-lengkap.xlsx`,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      );
+      setNotice({
+        tone: "success",
+        text: pickLang(
+          language,
+          `Workbook Excel ${slug}-formulasi-lengkap.xlsx (4 sheet lengkap) berhasil diunduh.`,
+          `Excel workbook ${slug}-formulasi-lengkap.xlsx (4 full sheets) downloaded.`,
+        ),
+      });
+    } catch (err) {
+      setNotice({
+        tone: "error",
+        text: err instanceof Error ? err.message : "Gagal membuat file Excel (.xlsx).",
+      });
+    }
+  };
+
   return (
     <SheetDialog
       open={open}
@@ -160,18 +198,32 @@ export function ExportDialog({
         {isNearFeasible && (
           <div
             role="status"
-            className="glass-card flex items-start gap-2.5 rounded-2xl border border-[var(--status-warning-border)] bg-[var(--status-warning-soft)] p-3 font-medium text-[var(--text-primary)]"
+            className={cn(
+              "flex items-start gap-2.5 border border-[var(--status-warning-border)] bg-[var(--status-warning-soft)] p-3 font-medium text-[var(--text-primary)]",
+              isAntiSlop ? "rounded-lg" : "glass-card rounded-2xl",
+            )}
           >
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--status-warning)]" />
             <div>
               <p className="font-bold">
-                {pickLang(
-                  language,
-                  "Mode Toleransi Target — Formula Mendekati Standar",
-                  "Flexible Bounds Mode — Closest-Fit Ration",
-                )}
+                {isAntiSlop
+                  ? pickLang(
+                      language,
+                      "Mode Toleransi Target: Formula Mendekati Standar",
+                      "Flexible Bounds Mode: Closest-Fit Ration",
+                    )
+                  : pickLang(
+                      language,
+                      "Mode Toleransi Target — Formula Mendekati Standar",
+                      "Flexible Bounds Mode — Closest-Fit Ration",
+                    )}
               </p>
-              <p className="mt-0.5 text-[11px] opacity-90">
+              <p
+                className={cn(
+                  "mt-0.5 text-[11px]",
+                  isAntiSlop ? "text-[var(--text-secondary)]" : "opacity-90",
+                )}
+              >
                 {pickLang(
                   language,
                   "Dokumen bertanda kompromi nutrisi. PDF Lengkap menyertakan penanda kompromi nutrisi, sedangkan PDF Lembar Timbang Gudang dikunci hingga formula mencapai status Optimal penuh.",
@@ -185,7 +237,10 @@ export function ExportDialog({
         {isInfeasibleOrEmpty && (
           <div
             role="status"
-            className="glass-card glass-card-coral flex items-start gap-2.5 rounded-2xl border border-[var(--status-danger-border)] bg-[var(--status-danger-soft)] p-3 font-medium text-[var(--text-primary)]"
+            className={cn(
+              "flex items-start gap-2.5 border border-[var(--status-danger-border)] bg-[var(--status-danger-soft)] p-3 font-medium text-[var(--text-primary)]",
+              isAntiSlop ? "rounded-lg" : "glass-card glass-card-coral rounded-2xl",
+            )}
           >
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--status-danger)]" />
             <div>
@@ -196,7 +251,12 @@ export function ExportDialog({
                   "PDF export blocked (Infeasible / Empty status)",
                 )}
               </p>
-              <p className="mt-0.5 text-[11px] opacity-90">
+              <p
+                className={cn(
+                  "mt-0.5 text-[11px]",
+                  isAntiSlop ? "text-[var(--text-secondary)]" : "opacity-90",
+                )}
+              >
                 {pickLang(
                   language,
                   "Sesuaikan bahan atau target nutrien hingga formula mencapai status Optimal atau Mendekati Target.",
@@ -209,12 +269,20 @@ export function ExportDialog({
 
         {notice && (
           <div
-            role="status"
-            className={
+            role={notice.tone === "error" ? "alert" : "status"}
+            className={cn(
+              "border p-3 font-medium text-[var(--text-primary)]",
+              isAntiSlop ? "rounded-lg" : "glass-card rounded-2xl",
               notice.tone === "success"
-                ? "glass-card glass-card-emerald rounded-2xl border border-[var(--status-success-border)] bg-[var(--status-success-soft)] p-3 font-medium text-[var(--text-primary)]"
-                : "glass-card glass-card-coral rounded-2xl border border-[var(--status-danger-border)] bg-[var(--status-danger-soft)] p-3 font-medium text-[var(--text-primary)]"
-            }
+                ? cn(
+                    "border-[var(--status-success-border)] bg-[var(--status-success-soft)]",
+                    !isAntiSlop && "glass-card-emerald",
+                  )
+                : cn(
+                    "border-[var(--status-danger-border)] bg-[var(--status-danger-soft)]",
+                    !isAntiSlop && "glass-card-coral",
+                  ),
+            )}
           >
             {notice.text}
           </div>
@@ -225,7 +293,12 @@ export function ExportDialog({
             type="button"
             disabled={isInfeasibleOrEmpty}
             onClick={handleDownloadPdfFull}
-            className="glass-card glass-card-interactive flex min-h-20 cursor-pointer items-start gap-3 p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:pointer-events-none disabled:opacity-50"
+            className={cn(
+              "flex min-h-20 cursor-pointer items-start gap-3 p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-50",
+              isAntiSlop
+                ? "rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--bg-sunken)]"
+                : "glass-card glass-card-interactive disabled:pointer-events-none",
+            )}
           >
             <GlossySquircleIcon tone="petrol" size="sm" icon={<FileText className="h-4 w-4" />} />
             <div>
@@ -255,7 +328,12 @@ export function ExportDialog({
                   )
                 : pickLang(language, "Khusus status Optimal", "Optimal status only")
             }
-            className="glass-card glass-card-interactive flex min-h-20 cursor-pointer items-start gap-3 p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:pointer-events-none disabled:opacity-50"
+            className={cn(
+              "flex min-h-20 cursor-pointer items-start gap-3 p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-50",
+              isAntiSlop
+                ? "rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--bg-sunken)]"
+                : "glass-card glass-card-interactive disabled:pointer-events-none",
+            )}
           >
             <GlossySquircleIcon tone="amber" size="sm" icon={<Printer className="h-4 w-4" />} />
             <div>
@@ -272,11 +350,54 @@ export function ExportDialog({
                       "Khusus operator adukan: menampilkan daftar bahan, berat kg, dan kotak centang tanpa harga.",
                       "For mixer operators: lists feeds, kg weights, and checkboxes without prices.",
                     )
-                  : pickLang(
-                      language,
-                      "Terkunci — hanya tersedia bila status formulasi Optimal penuh.",
-                      "Locked — available only when formulation status is fully Optimal.",
-                    )}
+                  : isAntiSlop
+                    ? pickLang(
+                        language,
+                        "Terkunci, hanya tersedia bila status formulasi Optimal penuh.",
+                        "Locked, available only when formulation status is fully Optimal.",
+                      )
+                    : pickLang(
+                        language,
+                        "Terkunci — hanya tersedia bila status formulasi Optimal penuh.",
+                        "Locked — available only when formulation status is fully Optimal.",
+                      )}
+              </p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            disabled={isInfeasibleOrEmpty}
+            onClick={handleDownloadXlsxFull}
+            className={cn(
+              "flex min-h-20 cursor-pointer items-start gap-3 p-4 text-left sm:col-span-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-50",
+              isAntiSlop
+                ? "rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--bg-sunken)]"
+                : "glass-card glass-card-interactive disabled:pointer-events-none",
+            )}
+          >
+            <GlossySquircleIcon
+              tone="mint"
+              size="sm"
+              icon={<FileSpreadsheet className="h-4 w-4" />}
+            />
+            <div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <p className="font-bold text-[var(--text-primary)]">
+                  {pickLang(
+                    language,
+                    "Excel (.xlsx) Matriks Nutrien, Konsumsi Harian & Timbang 2-Versi",
+                    "Excel (.xlsx) Full Nutrient Matrix, Daily Intake & Dual Batch Weights",
+                  )}
+                </p>
+                <Badge tone="emerald">4 Sheet</Badge>
+              </div>
+              <p className="mt-1 text-[11px] leading-relaxed text-[var(--text-secondary)]">
+                {pickLang(
+                  language,
+                  "4 worksheet lengkap: Komposisi & Timbang (xx,xxx kg & Bulat + Konsumsi Harian BK/As-Fed), Profil Nutrien 0,00x, Shadow Price, dan Matriks 25 Nutrien seluruh bahan.",
+                  "4 full worksheets: Composition & Dual Weights (xx.xxx kg & Rounded + Daily Intake DM/As-Fed), 0.00x Nutrient Profile, Shadow Prices, and 25-Nutrient Ingredient Matrix.",
+                )}
               </p>
             </div>
           </button>

@@ -1,6 +1,8 @@
 import { AlertCircle, AlertTriangle } from "lucide-react";
 import { formatIisBound, pickLang, translateConflict } from "../../i18n";
+import { useOptionalThemeContext } from "../../theme";
 import type { AppLanguage, ConflictDiagnostic, FormulationStatus, IisItem } from "../../types";
+import { cn } from "../../utils/cn";
 import { formatNumberLocale } from "../../utils/locale-number";
 
 export interface ConflictDiagnosticsBannerProps {
@@ -21,6 +23,7 @@ export function ConflictDiagnosticsBanner({
   relaxationPenalty,
   language = "id",
 }: ConflictDiagnosticsBannerProps) {
+  const isAntiSlop = useOptionalThemeContext()?.uiMode === "anti-slop";
   const errors = conflicts.filter((c) => c.severity === "error");
   const warnings = conflicts.filter(
     (c) => c.severity === "warning" && c.code !== "ADVANCE_NULL_DATA",
@@ -35,16 +38,26 @@ export function ConflictDiagnosticsBanner({
       {(status === "infeasible" || errors.length > 0) && (
         <div
           role="alert"
-          className="glass-card glass-card-coral rounded-2xl border-[var(--status-danger-border)] bg-[var(--status-danger-soft)] p-3.5 text-xs text-[var(--text-primary)]"
+          className={cn(
+            "border border-[var(--status-danger-border)] bg-[var(--status-danger-soft)] p-3.5 text-xs text-[var(--text-primary)]",
+            isAntiSlop ? "rounded-lg" : "glass-card glass-card-coral rounded-2xl",
+          )}
         >
           <div className="flex items-start gap-2.5">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--status-danger)]" />
+            <AlertCircle
+              className="mt-0.5 h-4 w-4 shrink-0 text-[var(--status-danger)]"
+              aria-hidden="true"
+            />
             <div className="space-y-1">
               <p className="font-bold text-[var(--status-danger)]">
                 {pickLang(
                   language,
-                  "Formula Tidak Ditemukan (Target Terlalu Ketat) — Kendala Konflik Terdeteksi",
-                  "Infeasible Formulation — Conflicting Constraints Detected",
+                  isAntiSlop
+                    ? "Formula Tidak Ditemukan (Target Terlalu Ketat): Kendala Konflik Terdeteksi"
+                    : "Formula Tidak Ditemukan (Target Terlalu Ketat) — Kendala Konflik Terdeteksi",
+                  isAntiSlop
+                    ? "Infeasible Formulation: Conflicting Constraints Detected"
+                    : "Infeasible Formulation — Conflicting Constraints Detected",
                 )}
               </p>
               <ul className="list-disc space-y-1 pl-4">
@@ -84,7 +97,10 @@ export function ConflictDiagnosticsBanner({
       {(status === "near_feasible" || warnings.length > 0) && status !== "infeasible" && (
         <div
           role="status"
-          className="glass-card glass-card-amber rounded-2xl border-[var(--status-warning-border)] bg-[var(--status-warning-soft)] p-3.5 text-xs text-[var(--text-primary)]"
+          className={cn(
+            "border border-[var(--status-warning-border)] bg-[var(--status-warning-soft)] p-3.5 text-xs text-[var(--text-primary)]",
+            isAntiSlop ? "rounded-lg" : "glass-card glass-card-amber rounded-2xl",
+          )}
         >
           <div className="flex items-start gap-2.5">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--status-warning)]" />

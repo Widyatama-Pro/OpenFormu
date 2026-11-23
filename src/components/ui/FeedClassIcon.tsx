@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { Barrel, Bean, Bone, Flame, FlaskConical, Pill, Sprout, Wheat } from "lucide-react";
 import { getFeedClassLabel } from "../../data/feed-classes";
+import { useOptionalThemeContext } from "../../theme";
 import type { AppLanguage, FeedClassCode } from "../../types";
 import { cn } from "../../utils/cn";
 
@@ -19,6 +20,17 @@ const CLASS_STYLE: Record<FeedClassCode, string> = {
   6: "border-stone-500/35 bg-stone-500/14 text-stone-700 dark:text-stone-300",
   7: "border-rose-500/30 bg-rose-500/12 text-rose-700 dark:text-rose-300",
   8: "border-cyan-600/30 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300",
+};
+
+const ANTI_SLOP_CLASS_STYLE: Record<FeedClassCode, string> = {
+  1: "border-[var(--border-strong)] bg-[var(--bg-surface-elevated)] text-amber-800 dark:bg-[var(--bg-canvas)] dark:text-amber-300",
+  2: "border-[var(--border-strong)] bg-[var(--bg-surface-elevated)] text-emerald-800 dark:bg-[var(--bg-canvas)] dark:text-emerald-300",
+  3: "border-[var(--border-strong)] bg-[var(--bg-surface-elevated)] text-teal-800 dark:bg-[var(--bg-canvas)] dark:text-teal-300",
+  4: "border-[var(--border-strong)] bg-[var(--bg-surface-elevated)] text-orange-800 dark:bg-[var(--bg-canvas)] dark:text-orange-300",
+  5: "border-[var(--border-strong)] bg-[var(--bg-surface-elevated)] text-sky-800 dark:bg-[var(--bg-canvas)] dark:text-sky-300",
+  6: "border-[var(--border-strong)] bg-[var(--bg-surface-elevated)] text-stone-800 dark:bg-[var(--bg-canvas)] dark:text-stone-200",
+  7: "border-[var(--border-strong)] bg-[var(--bg-surface-elevated)] text-rose-800 dark:bg-[var(--bg-canvas)] dark:text-rose-200",
+  8: "border-[var(--border-strong)] bg-[var(--bg-surface-elevated)] text-cyan-800 dark:bg-[var(--bg-canvas)] dark:text-cyan-300",
 };
 
 /**
@@ -61,6 +73,7 @@ export const FeedClassIcon = memo(function FeedClassIcon({
   language = "id",
   className,
 }: FeedClassIconProps) {
+  const isAntiSlop = useOptionalThemeContext()?.uiMode === "anti-slop";
   const label = getFeedClassLabel(language, code);
   return (
     <span
@@ -69,7 +82,7 @@ export const FeedClassIcon = memo(function FeedClassIcon({
       data-feed-class={code}
       className={cn(
         "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
-        CLASS_STYLE[code],
+        isAntiSlop ? ANTI_SLOP_CLASS_STYLE[code] : CLASS_STYLE[code],
         className,
       )}
     >

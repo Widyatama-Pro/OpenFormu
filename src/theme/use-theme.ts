@@ -5,6 +5,7 @@ import type {
   ResolvedThemeMode,
   ThemeModeSetting,
   ThemePaletteId,
+  UiMode,
 } from "../types";
 import { syncAndroidSystemBars } from "./android-theme-bridge";
 import { isThemePaletteId } from "./palettes";
@@ -14,6 +15,7 @@ export const THEME_STORAGE_KEYS = {
   id: "openformu-theme-id",
   mode: "openformu-theme-mode",
   amoled: "openformu-theme-amoled",
+  uiMode: "openformu-ui-mode",
   uiEnhancer: "openformu-theme-enhancer",
   renderingEngine: "openformu-engine-mode",
   motionEngine: "openformu-motion-engine",
@@ -25,12 +27,17 @@ const LEGACY_STORAGE_KEYS: Readonly<Record<keyof typeof THEME_STORAGE_KEYS, read
   id: ["openformul-theme-id", "app-theme-id"],
   mode: ["openformul-theme-mode", "app-theme-mode"],
   amoled: ["openformul-theme-amoled", "app-theme-amoled"],
+  uiMode: ["openformul-ui-mode"],
   uiEnhancer: ["openformul-theme-enhancer"],
   renderingEngine: ["openformul-engine-mode"],
   motionEngine: ["openformul-motion-engine"],
   glassBlurPx: ["openformul-glass-blur-px"],
   glowIntensityPct: ["openformul-glow-intensity-pct"],
 };
+
+export function isUiMode(value: string | null): value is UiMode {
+  return value === "biasa" || value === "enhanced" || value === "anti-slop";
+}
 
 export interface UsePortableThemeOptions {
   readonly storageKeyId?: string;
@@ -39,6 +46,7 @@ export interface UsePortableThemeOptions {
   readonly defaultPalette?: ThemePaletteId;
   readonly defaultMode?: ThemeModeSetting;
   readonly defaultAmoled?: boolean;
+  readonly defaultUiMode?: UiMode;
   readonly defaultUiEnhancer?: boolean;
   readonly defaultRenderingEngine?: RenderingEngineMode;
   readonly defaultMotionEngine?: MotionEngineMode;
@@ -53,6 +61,7 @@ export interface PortableThemeState {
   readonly modeSetting: ThemeModeSetting;
   readonly resolvedMode: ResolvedThemeMode;
   readonly amoledPureBlack: boolean;
+  readonly uiMode: UiMode;
   readonly uiEnhancer: boolean;
   readonly renderingEngine: RenderingEngineMode;
   readonly motionEngine: MotionEngineMode;
@@ -61,6 +70,7 @@ export interface PortableThemeState {
   readonly setPaletteId: (id: ThemePaletteId) => void;
   readonly setModeSetting: (mode: ThemeModeSetting) => void;
   readonly setAmoledPureBlack: (enabled: boolean) => void;
+  readonly setUiMode: (mode: UiMode) => void;
   readonly setUiEnhancer: (enabled: boolean) => void;
   readonly setRenderingEngine: (mode: RenderingEngineMode) => void;
   readonly setMotionEngine: (mode: MotionEngineMode) => void;
@@ -68,6 +78,8 @@ export interface PortableThemeState {
   readonly setGlowIntensityPct: (pct: number) => void;
   readonly toggleLightDark: () => void;
 }
+
+export type ThemeContextValue = PortableThemeState;
 
 function readStoredValue(primaryKey: string, legacyKeys?: readonly string[]): string | null {
   if (typeof window === "undefined") return null;
@@ -110,7 +122,7 @@ function applyThemeToDocument(
   paletteId: ThemePaletteId,
   resolvedMode: ResolvedThemeMode,
   amoledPureBlack: boolean,
-  uiEnhancer: boolean,
+  uiMode: UiMode,
   renderingEngine: RenderingEngineMode,
   motionEngine: MotionEngineMode,
   glassBlurPx: number,
@@ -118,9 +130,11 @@ function applyThemeToDocument(
 ): void {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
+  const isEnhanced = uiMode === "enhanced";
   root.setAttribute("data-theme", paletteId);
   root.setAttribute("data-mode", resolvedMode);
-  root.setAttribute("data-ui-enhancer", uiEnhancer ? "true" : "false");
+  root.setAttribute("data-ui-mode", uiMode);
+  root.setAttribute("data-ui-enhancer", isEnhanced ? "true" : "false");
   root.setAttribute("data-engine-mode", renderingEngine);
   root.setAttribute("data-motion-engine", motionEngine);
   root.classList.toggle("dark", resolvedMode === "dark");
@@ -131,12 +145,12 @@ function applyThemeToDocument(
   }
 
   const effectiveBlur =
-    !uiEnhancer || renderingEngine === "crisp"
+    !isEnhanced || renderingEngine === "crisp"
       ? 0
       : renderingEngine === "balanced"
         ? Math.min(glassBlurPx, 12)
         : glassBlurPx;
-  const effectiveGlowScale = !uiEnhancer
+  const effectiveGlowScale = !isEnhanced
     ? 0
     : renderingEngine === "crisp"
       ? Math.min(glowIntensityPct, 35) / 100
@@ -156,6 +170,7 @@ export function usePortableTheme(options: UsePortableThemeOptions = {}): Portabl
     defaultPalette = "original-default",
     defaultMode = "light",
     defaultAmoled = false,
+    defaultUiMode,
     defaultUiEnhancer = true,
     defaultRenderingEngine = "ultra",
     defaultMotionEngine = "gpu_flip",
@@ -183,12 +198,22 @@ export function usePortableTheme(options: UsePortableThemeOptions = {}): Portabl
     return defaultAmoled;
   });
 
-  const [uiEnhancer, setUiEnhancerState] = useState<boolean>(() => {
-    const saved = readStoredValue(THEME_STORAGE_KEYS.uiEnhancer, LEGACY_STORAGE_KEYS.uiEnhancer);
-    if (saved === "true") return true;
-    if (saved === "false") return false;
-    return defaultUiEnhancer;
+  const resolvedDefaultUiMode: UiMode =
+    defaultUiMode ?? (defaultUiEnhancer === false ? "biasa" : "enhanced");
+
+  const [uiMode, setUiModeState] = useState<UiMode>(() => {
+    const savedUiMode = readStoredValue(THEME_STORAGE_KEYS.uiMode, LEGACY_STORAGE_KEYS.uiMode);
+    if (isUiMode(savedUiMode)) return savedUiMode;
+    const legacyEnhancer = readStoredValue(
+      THEME_STORAGE_KEYS.uiEnhancer,
+      LEGACY_STORAGE_KEYS.uiEnhancer,
+    );
+    if (legacyEnhancer === "false") return "biasa";
+    if (legacyEnhancer === "true") return "enhanced";
+    return resolvedDefaultUiMode;
   });
+
+  const uiEnhancer = uiMode === "enhanced";
 
   const [renderingEngine, setRenderingEngineState] = useState<RenderingEngineMode>(() => {
     const saved = readStoredValue(
@@ -252,7 +277,7 @@ export function usePortableTheme(options: UsePortableThemeOptions = {}): Portabl
       paletteId,
       resolvedMode,
       amoledPureBlack,
-      uiEnhancer,
+      uiMode,
       renderingEngine,
       motionEngine,
       glassBlurPx,
@@ -274,6 +299,7 @@ export function usePortableTheme(options: UsePortableThemeOptions = {}): Portabl
         paletteId,
         mode: resolvedMode,
         amoledPureBlack,
+        uiMode,
         uiEnhancer,
         ...(synced ? { resolvedCanvasHex: synced.canvasHex } : {}),
       });
@@ -292,6 +318,7 @@ export function usePortableTheme(options: UsePortableThemeOptions = {}): Portabl
     paletteId,
     resolvedMode,
     amoledPureBlack,
+    uiMode,
     uiEnhancer,
     renderingEngine,
     motionEngine,
@@ -325,10 +352,18 @@ export function usePortableTheme(options: UsePortableThemeOptions = {}): Portabl
     [storageKeyAmoled],
   );
 
-  const setUiEnhancer = useCallback((enabled: boolean) => {
-    setUiEnhancerState(enabled);
-    writeStoredValue(THEME_STORAGE_KEYS.uiEnhancer, String(enabled));
+  const setUiMode = useCallback((mode: UiMode) => {
+    setUiModeState(mode);
+    writeStoredValue(THEME_STORAGE_KEYS.uiMode, mode);
+    writeStoredValue(THEME_STORAGE_KEYS.uiEnhancer, mode === "enhanced" ? "true" : "false");
   }, []);
+
+  const setUiEnhancer = useCallback(
+    (enabled: boolean) => {
+      setUiMode(enabled ? "enhanced" : "biasa");
+    },
+    [setUiMode],
+  );
 
   const setRenderingEngine = useCallback((mode: RenderingEngineMode) => {
     setRenderingEngineState(mode);
@@ -369,6 +404,7 @@ export function usePortableTheme(options: UsePortableThemeOptions = {}): Portabl
     modeSetting,
     resolvedMode,
     amoledPureBlack,
+    uiMode,
     uiEnhancer,
     renderingEngine,
     motionEngine,
@@ -377,6 +413,7 @@ export function usePortableTheme(options: UsePortableThemeOptions = {}): Portabl
     setPaletteId,
     setModeSetting,
     setAmoledPureBlack,
+    setUiMode,
     setUiEnhancer,
     setRenderingEngine,
     setMotionEngine,
@@ -393,6 +430,7 @@ const FALLBACK_THEME_STATE: PortableThemeState = {
   modeSetting: "light",
   resolvedMode: "light",
   amoledPureBlack: false,
+  uiMode: "enhanced",
   uiEnhancer: true,
   renderingEngine: "ultra",
   motionEngine: "gpu_flip",
@@ -401,6 +439,7 @@ const FALLBACK_THEME_STATE: PortableThemeState = {
   setPaletteId: () => {},
   setModeSetting: () => {},
   setAmoledPureBlack: () => {},
+  setUiMode: () => {},
   setUiEnhancer: () => {},
   setRenderingEngine: () => {},
   setMotionEngine: () => {},

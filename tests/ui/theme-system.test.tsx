@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { runInNewContext } from "node:vm";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -108,6 +111,8 @@ describe("OpenFormu Multi-Theme Design System (10 Variants, PWA, Android & PDF)"
     document.documentElement.removeAttribute("data-theme");
     document.documentElement.removeAttribute("data-mode");
     document.documentElement.removeAttribute("data-amoled");
+    document.documentElement.removeAttribute("data-ui-mode");
+    document.documentElement.removeAttribute("data-ui-enhancer");
     document.documentElement.classList.remove("dark", "theme-transition-ready");
     document.head
       .querySelectorAll(
@@ -354,6 +359,8 @@ describe("OpenFormu Multi-Theme Design System (10 Variants, PWA, Android & PDF)"
     expect(document.querySelector('[data-theme-control="palette-prev"]')).not.toBeNull();
     expect(document.querySelector('[data-theme-control="palette-next"]')).not.toBeNull();
     expect(document.querySelectorAll('[data-theme-control="mode"]').length).toBe(3);
+    expect(headerEl?.querySelectorAll('[data-theme-control="ui-mode"]').length ?? 0).toBe(0);
+    expect(document.querySelectorAll('[data-theme-control="ui-mode"]').length).toBe(3);
   });
 
   it("mereaktifkan penanda tema pada FormulationCharts saat palet atau mode berubah & fallback aman palet lama", async () => {
@@ -383,6 +390,7 @@ describe("OpenFormu Multi-Theme Design System (10 Variants, PWA, Android & PDF)"
       themePalette: "template-03",
       themeModeSetting: "system",
       amoledPureBlack: true,
+      uiMode: "anti-slop",
       defaultBasis: "as_fed",
       defaultBatchKg: 250,
       zeroInclusionDefaultPct: 2,
@@ -393,6 +401,7 @@ describe("OpenFormu Multi-Theme Design System (10 Variants, PWA, Android & PDF)"
       expect(valid.data.themePalette).toBe("template-03");
       expect(valid.data.themeModeSetting).toBe("system");
       expect(valid.data.amoledPureBlack).toBe(true);
+      expect(valid.data.uiMode).toBe("anti-slop");
     }
 
     const sanitized = validateUserPreferences({
@@ -401,6 +410,7 @@ describe("OpenFormu Multi-Theme Design System (10 Variants, PWA, Android & PDF)"
       themePalette: "__proto__",
       themeModeSetting: "invalid-mode",
       amoledPureBlack: "yes",
+      uiMode: "__proto__",
     });
 
     expect(sanitized.ok).toBe(true);
@@ -408,6 +418,7 @@ describe("OpenFormu Multi-Theme Design System (10 Variants, PWA, Android & PDF)"
       expect(sanitized.data.themePalette).toBeUndefined();
       expect(sanitized.data.themeModeSetting).toBeUndefined();
       expect(sanitized.data.amoledPureBlack).toBeUndefined();
+      expect(sanitized.data.uiMode).toBeUndefined();
     }
   });
 
@@ -444,5 +455,95 @@ describe("OpenFormu Multi-Theme Design System (10 Variants, PWA, Android & PDF)"
     expect(fullText).toContain("0.945 0.961 0.976 rg");
     expect(fullText).toContain("0.059 0.090 0.165 rg");
     expect(batchText).toContain("0.945 0.961 0.976 rg");
+  });
+
+  it("memulihkan uiMode dari localStorage, memigrasi openformu-theme-enhancer lama, dan menerapkan hidrasi pre-paint index.html", () => {
+    window.localStorage.setItem(THEME_STORAGE_KEYS.uiMode, "anti-slop");
+
+    const firstRender = render(
+      <ThemeProvider>
+        <ThemeSwitcherMenu language="id" />
+      </ThemeProvider>,
+    );
+
+    expect(document.documentElement.getAttribute("data-ui-mode")).toBe("anti-slop");
+    expect(document.documentElement.getAttribute("data-ui-enhancer")).toBe("false");
+    expect(screen.getByRole("radio", { name: /^Anti-Slop/i })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    firstRender.unmount();
+
+    // Legacy migration: openformu-theme-enhancer = "false" -> "biasa" when openformu-ui-mode is absent
+    window.localStorage.clear();
+    window.localStorage.setItem(THEME_STORAGE_KEYS.uiEnhancer, "false");
+    const legacyRender = render(
+      <ThemeProvider>
+        <ThemeSwitcherMenu language="id" />
+      </ThemeProvider>,
+    );
+    expect(document.documentElement.getAttribute("data-ui-mode")).toBe("biasa");
+    expect(document.documentElement.getAttribute("data-ui-enhancer")).toBe("false");
+    expect(screen.getByRole("radio", { name: /^Biasa/i })).toHaveAttribute("aria-checked", "true");
+    legacyRender.unmount();
+
+    // openformu-ui-mode takes precedence over legacy openformu-theme-enhancer
+    window.localStorage.setItem(THEME_STORAGE_KEYS.uiMode, "anti-slop");
+    window.localStorage.setItem(THEME_STORAGE_KEYS.uiEnhancer, "true");
+    const precedenceRender = render(
+      <ThemeProvider>
+        <ThemeSwitcherMenu language="id" />
+      </ThemeProvider>,
+    );
+    expect(document.documentElement.getAttribute("data-ui-mode")).toBe("anti-slop");
+    expect(document.documentElement.getAttribute("data-ui-enhancer")).toBe("false");
+    precedenceRender.unmount();
+
+    // Pre-paint script in index.html sets data-ui-mode and data-ui-enhancer before React mounts
+    const html = readFileSync(resolve(process.cwd(), "index.html"), "utf8");
+    const scriptMatch = html.match(/<script>\s*(\(function \(\) \{[\s\S]*?\}\)\(\);)\s*<\/script>/);
+    expect(scriptMatch?.[1]).toBeDefined();
+
+    window.localStorage.clear();
+    window.localStorage.setItem("openformu-ui-mode", "anti-slop");
+    document.documentElement.removeAttribute("data-ui-mode");
+    document.documentElement.removeAttribute("data-ui-enhancer");
+    runInNewContext(scriptMatch![1]!, {
+      localStorage: window.localStorage,
+      document,
+      window,
+    });
+    expect(document.documentElement.getAttribute("data-ui-mode")).toBe("anti-slop");
+    expect(document.documentElement.getAttribute("data-ui-enhancer")).toBe("false");
+
+    window.localStorage.clear();
+    window.localStorage.setItem("openformul-theme-enhancer", "false");
+    runInNewContext(scriptMatch![1]!, {
+      localStorage: window.localStorage,
+      document,
+      window,
+    });
+    expect(document.documentElement.getAttribute("data-ui-mode")).toBe("biasa");
+    expect(document.documentElement.getAttribute("data-ui-enhancer")).toBe("false");
+  });
+
+  it("menggunakan canvasHex pada syncAndroidSystemBars untuk mode anti-slop terang dan primaryHex untuk mode biasa terang", async () => {
+    const antiSlopLight = await syncAndroidSystemBars({
+      paletteId: "original-default",
+      mode: "light",
+      uiMode: "anti-slop",
+      uiEnhancer: false,
+    });
+    expect(antiSlopLight.backgroundColor).toBe("#F5F4EF");
+    expect(antiSlopLight.isDarkBackground).toBe(false);
+
+    const biasaLight = await syncAndroidSystemBars({
+      paletteId: "original-default",
+      mode: "light",
+      uiMode: "biasa",
+      uiEnhancer: false,
+    });
+    expect(biasaLight.backgroundColor).toBe("#142B27");
+    expect(biasaLight.isDarkBackground).toBe(true);
   });
 });

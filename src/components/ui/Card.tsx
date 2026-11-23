@@ -1,4 +1,5 @@
 import type { HTMLAttributes } from "react";
+import { useOptionalThemeContext } from "../../theme";
 import { cn } from "../../utils/cn";
 
 export type CardHighlight = "none" | "coral" | "emerald" | "amber";
@@ -15,14 +16,25 @@ const HIGHLIGHT_CLASS: Record<CardHighlight, string> = {
   amber: "glass-card-amber",
 };
 
-/** Permukaan 3-layer Acrylic Glass dengan specular rim light & ambient colored shadow. */
+const ANTI_SLOP_HIGHLIGHT_CLASS: Record<CardHighlight, string> = {
+  none: "",
+  coral: "border-[var(--status-danger)]",
+  emerald: "border-[var(--status-success)]",
+  amber: "border-[var(--status-warning)]",
+};
+
 export function Card({ interactive = true, highlight = "none", className, ...rest }: CardProps) {
+  const isAntiSlop = useOptionalThemeContext()?.uiMode === "anti-slop";
+
   return (
     <div
       className={cn(
-        "glass-card rounded-2xl",
-        interactive && "glass-card-interactive",
-        HIGHLIGHT_CLASS[highlight],
+        isAntiSlop
+          ? "rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-elevated)] transition-colors duration-150"
+          : "glass-card rounded-2xl",
+        isAntiSlop && interactive && "hover:border-[var(--border-strong)]",
+        !isAntiSlop && interactive && "glass-card-interactive",
+        isAntiSlop ? ANTI_SLOP_HIGHLIGHT_CLASS[highlight] : HIGHLIGHT_CLASS[highlight],
         className,
       )}
       {...rest}

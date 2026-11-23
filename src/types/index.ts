@@ -330,6 +330,7 @@ export type ThemePaletteId =
 
 export type ThemeModeSetting = "light" | "dark" | "system";
 export type ResolvedThemeMode = "light" | "dark";
+export type UiMode = "biasa" | "enhanced" | "anti-slop";
 export type TableViewTier = "basic" | "standard" | "advanced";
 export type RenderingEngineMode = "ultra" | "balanced" | "crisp";
 export type MotionEngineMode = "gpu_flip" | "css_native";
@@ -340,7 +341,9 @@ export interface UserPreferences {
   readonly themePalette?: ThemePaletteId;
   readonly themeModeSetting?: ThemeModeSetting;
   readonly amoledPureBlack?: boolean;
-  /** Mode UI Enhancer (Acrylic Glass & Volumetric Glow) aktif di semua 5 palet warna. */
+  /** Mode tampilan antarmuka: biasa, enhanced (default), atau anti-slop. */
+  readonly uiMode?: UiMode;
+  /** Kompatibilitas balik untuk sakelar UI Enhancer (true hanya saat uiMode === "enhanced"). */
   readonly uiEnhancer?: boolean;
   /** Profil engine grafis: ultra (Smooth 120 FPS), balanced, atau crisp (Standard hemat daya). */
   readonly renderingEngine?: RenderingEngineMode;

@@ -1,7 +1,9 @@
 import { Lock } from "lucide-react";
 import { MOCK_NUTRIENTS } from "../../data/mock-state";
 import { pickLang } from "../../i18n";
+import { useOptionalThemeContext } from "../../theme";
 import type { AppLanguage, Nutrient, RatioConstraint } from "../../types";
+import { cn } from "../../utils/cn";
 import { formatNumberLocale } from "../../utils/locale-number";
 import { Badge } from "../ui/Badge";
 
@@ -19,7 +21,9 @@ export function RatioConstraintsSection({
   nutrientsCatalog = MOCK_NUTRIENTS,
   language = "id",
 }: RatioConstraintsSectionProps) {
+  const isAntiSlop = useOptionalThemeContext()?.uiMode === "anti-slop";
   if (ratios.length === 0) return null;
+  const emptyVal = isAntiSlop ? "-" : "—";
 
   return (
     <div className="mt-4 space-y-2 border-t border-[var(--glass-border-tint,var(--border-subtle))] pt-3.5">
@@ -58,19 +62,25 @@ export function RatioConstraintsSection({
           return (
             <div
               key={ratio.id ?? `${ratio.numerator}-${ratio.denominator}-${idx}`}
-              className="acrylic-subcard flex flex-wrap items-center justify-between gap-2 rounded-2xl px-3.5 py-2.5 text-xs"
+              className={cn(
+                "flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 text-xs",
+                isAntiSlop
+                  ? "rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]"
+                  : "acrylic-subcard rounded-2xl",
+              )}
             >
               <div>
                 <p className="font-semibold text-[var(--text-primary)]">
                   {ratio.label ?? `${numLabel} : ${denLabel}`}
                 </p>
                 <p className="text-[11px] tabular-nums text-[var(--text-secondary)]">
-                  Target: {ratio.min ?? "—"} {pickLang(language, "s/d", "to")} {ratio.max ?? "—"}
+                  Target: {ratio.min ?? emptyVal} {pickLang(language, "s/d", "to")}{" "}
+                  {ratio.max ?? emptyVal}
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-bold tabular-nums text-[var(--text-primary)]">
-                  {actualRatio !== null ? `${formatNumberLocale(actualRatio, 2)} : 1` : "—"}
+                  {actualRatio !== null ? `${formatNumberLocale(actualRatio, 2)} : 1` : emptyVal}
                 </span>
                 <Badge tone={actualRatio === null ? "neutral" : isMet ? "emerald" : "rose"}>
                   {actualRatio === null

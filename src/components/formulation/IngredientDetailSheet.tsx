@@ -2,7 +2,9 @@ import { useState } from "react";
 import { RotateCcw } from "lucide-react";
 import { MOCK_NUTRIENTS } from "../../data/mock-state";
 import { pickLang } from "../../i18n";
+import { useOptionalThemeContext } from "../../theme";
 import type { AppLanguage, Ingredient, Nutrient, NutrientTier } from "../../types";
+import { cn } from "../../utils/cn";
 import { isDerivedNutrient, resolveNutrientValue } from "../../utils/equations";
 import {
   formatCurrencyIdr,
@@ -42,6 +44,7 @@ export function IngredientDetailSheet({
   language,
 }: IngredientDetailSheetProps) {
   const [tab, setTab] = useState<DetailTab>("basic");
+  const isAntiSlop = useOptionalThemeContext()?.uiMode === "anti-slop";
 
   if (!ingredient) return null;
 
@@ -122,7 +125,7 @@ export function IngredientDetailSheet({
                         nutrients: { ...ingredient.nutrients, [nut.id]: null },
                       })
                     }
-                    className="cursor-pointer text-[11px] font-semibold text-[var(--status-info)] underline hover:opacity-80"
+                    className="inline-flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center px-1.5 text-[11px] font-semibold text-[var(--status-info)] underline hover:opacity-80 md:min-h-0 md:min-w-0 md:px-0"
                   >
                     Set N/A
                   </button>
@@ -205,7 +208,12 @@ export function IngredientDetailSheet({
         {tab === "rules" && (
           <div className="selectable-panel space-y-4">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="glass-card rounded-2xl p-3.5">
+              <div
+                className={cn(
+                  "p-3.5",
+                  isAntiSlop ? "modal-section-card rounded-xl" : "glass-card rounded-2xl",
+                )}
+              >
                 <div className="mb-1 flex items-center justify-between">
                   <span className="text-xs font-semibold text-[var(--text-primary)]">
                     {pickLang(language, "Harga Custom (Rp/kg)", "Custom Price (IDR/kg)")}
@@ -241,7 +249,12 @@ export function IngredientDetailSheet({
                 </p>
               </div>
 
-              <div className="glass-card rounded-2xl p-3.5">
+              <div
+                className={cn(
+                  "p-3.5",
+                  isAntiSlop ? "modal-section-card rounded-xl" : "glass-card rounded-2xl",
+                )}
+              >
                 <span className="mb-1 block text-xs font-semibold text-[var(--text-primary)]">
                   {pickLang(language, "Bahan Kering / Dry Matter (%)", "Dry Matter (%)")}
                 </span>
@@ -269,11 +282,15 @@ export function IngredientDetailSheet({
             </div>
 
             <div
-              className={
-                invalidBounds
-                  ? "glass-card glass-card-coral grid grid-cols-2 gap-3 rounded-2xl p-3.5"
-                  : "glass-card grid grid-cols-2 gap-3 rounded-2xl p-3.5"
-              }
+              className={cn(
+                "grid grid-cols-2 gap-3 p-3.5",
+                isAntiSlop
+                  ? cn(
+                      "modal-section-card rounded-xl",
+                      invalidBounds && "border-[var(--status-danger-border)]",
+                    )
+                  : cn("glass-card rounded-2xl", invalidBounds && "glass-card-coral"),
+              )}
             >
               <div>
                 <span className="mb-1 block text-xs font-semibold text-[var(--text-primary)]">
@@ -281,6 +298,7 @@ export function IngredientDetailSheet({
                 </span>
                 <NumericCellInput
                   value={min}
+                  fractionDigits={resolveDisplayDigits("%", "min", decimalPlaces, min)}
                   invalid={invalidBounds}
                   errorTooltip={pickLang(
                     language,
@@ -301,6 +319,7 @@ export function IngredientDetailSheet({
                 </span>
                 <NumericCellInput
                   value={max}
+                  fractionDigits={resolveDisplayDigits("%", "max", decimalPlaces, max)}
                   invalid={invalidBounds}
                   errorTooltip={pickLang(language, "Max harus >= Min", "Max must be >= Min")}
                   ariaLabel={`Inklusi maksimal ${ingName}`}
@@ -313,7 +332,12 @@ export function IngredientDetailSheet({
               </div>
             </div>
 
-            <div className="glass-card flex items-center justify-between gap-3 rounded-2xl p-3.5">
+            <div
+              className={cn(
+                "flex items-center justify-between gap-3 p-3.5",
+                isAntiSlop ? "modal-section-card rounded-xl" : "glass-card rounded-2xl",
+              )}
+            >
               <div>
                 <p className="text-xs font-semibold text-[var(--text-primary)]">
                   {pickLang(language, "Fosfor Fitat / Phytate-P (%)", "Phytate-P Substrate (%)")}
@@ -346,7 +370,12 @@ export function IngredientDetailSheet({
               </div>
             </div>
 
-            <div className="glass-card flex items-center justify-between gap-3 rounded-2xl p-3.5">
+            <div
+              className={cn(
+                "flex items-center justify-between gap-3 p-3.5",
+                isAntiSlop ? "modal-section-card rounded-xl" : "glass-card rounded-2xl",
+              )}
+            >
               <div>
                 <p className="text-xs font-semibold text-[var(--text-primary)]">
                   {pickLang(

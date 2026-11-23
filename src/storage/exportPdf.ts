@@ -1,3 +1,7 @@
+import {
+  computeRationDryMatterPct,
+  estimateDailyConsumption,
+} from "../components/analytics/BatchMixerCalculator";
 import { FEED_CLASSES, resolveFeedClass } from "../data/feed-classes";
 import type { FormulationResult, Ingredient, Nutrient, Recipe, Requirement } from "../types";
 import { resolveDisplayDigits } from "../utils/locale-number";
@@ -33,7 +37,7 @@ const MARGIN_L = 40;
 const MARGIN_R = 40;
 const CONTENT_W = PAGE_W - MARGIN_L - MARGIN_R;
 const START_Y = 800;
-const BOTTOM_Y = 50;
+const BOTTOM_Y = 54;
 
 function toWinAnsiAscii(text: string): string {
   return text
@@ -102,9 +106,21 @@ interface PdfColumnCell {
 
 type PdfRowOp =
   | {
-      readonly kind: "banner";
+      readonly kind: "head_kop";
+      readonly docCode: string;
+      readonly institutionTitle: string;
       readonly title: string;
       readonly subtitle: string;
+      readonly printedAt: string;
+      readonly height: number;
+    }
+  | {
+      readonly kind: "tail_kop";
+      readonly docCode: string;
+      readonly referenceNote: string;
+      readonly leftRole: string;
+      readonly centerRole: string;
+      readonly rightRole: string;
       readonly height: number;
     }
   | {
@@ -156,10 +172,14 @@ function paginateOps(ops: readonly PdfRowOp[]): PdfRowOp[][] {
   let y = START_Y;
 
   for (const op of ops) {
+    const pageTopY = pages.length === 0 && current.length === 0 ? START_Y : START_Y - 22;
+    if (current.length === 0) {
+      y = pageTopY;
+    }
     if (y - op.height < BOTTOM_Y && current.length > 0) {
       pages.push(current);
       current = [];
-      y = START_Y;
+      y = START_Y - 22; // Running Head Kop space on page 2+
     }
     current.push(op);
     y -= op.height;
@@ -199,27 +219,146 @@ function renderStructuredPageStream(
   pageOps: readonly PdfRowOp[],
   pageNum: number,
   totalPages: number,
+  runningTitle: string,
+  runningDocCode: string,
 ): string {
   const out: string[] = [];
   let y = START_Y;
 
+  // Running Head Kop on pages 2..N
+  if (pageNum > 1) {
+    out.push(
+      `0.059 0.239 0.243 rg BT /F2 8 Tf ${MARGIN_L} ${(START_Y - 8).toFixed(1)} Td (${escapePdfString(
+        `HEAD KOP LANJUTAN | ${truncateText(runningTitle, 64)}`,
+      )}) Tj ET`,
+    );
+    const codeRight = `DOK: ${runningDocCode} | Hal. ${pageNum}/${totalPages}`;
+    const codeW = estimateTextWidth(codeRight, 7.5, false);
+    out.push(
+      `0.35 0.42 0.50 rg BT /F1 7.5 Tf ${(MARGIN_L + CONTENT_W - codeW).toFixed(1)} ${(START_Y - 8).toFixed(1)} Td (${escapePdfString(
+        codeRight,
+      )}) Tj ET`,
+    );
+    out.push(
+      `0.059 0.239 0.243 RG 1.2 w ${MARGIN_L} ${(START_Y - 13).toFixed(1)} m ${(MARGIN_L + CONTENT_W).toFixed(1)} ${(START_Y - 13).toFixed(1)} l S`,
+    );
+    out.push(
+      `0.063 0.725 0.506 RG 0.5 w ${MARGIN_L} ${(START_Y - 15).toFixed(1)} m ${(MARGIN_L + CONTENT_W).toFixed(1)} ${(START_Y - 15).toFixed(1)} l S`,
+    );
+    y = START_Y - 22;
+  }
+
   for (const op of pageOps) {
-    if (op.kind === "banner") {
-      const boxY = y - op.height + 6;
-      const boxH = op.height - 6;
-      // Kotak header Deep Forest Teal (#0F3D3E)
+    if (op.kind === "head_kop") {
+      const topBarY = y - 14;
+      // Top Institutional Head Kop Eyebrow Band
+      out.push(
+        `0.945 0.965 0.961 rg ${MARGIN_L} ${topBarY.toFixed(1)} ${CONTENT_W.toFixed(1)} 14 re f`,
+      );
+      out.push(
+        `0.059 0.239 0.243 rg BT /F2 7.5 Tf ${(MARGIN_L + 8).toFixed(1)} ${(topBarY + 4).toFixed(1)} Td (${escapePdfString(
+          op.institutionTitle,
+        )}) Tj ET`,
+      );
+      const docMeta = `NO. DOK: ${op.docCode} | TGL CETAK: ${op.printedAt}`;
+      const docMetaW = estimateTextWidth(docMeta, 7.2, true);
+      out.push(
+        `0.059 0.239 0.243 rg BT /F2 7.2 Tf ${(MARGIN_L + CONTENT_W - docMetaW - 8).toFixed(1)} ${(topBarY + 4).toFixed(1)} Td (${escapePdfString(
+          docMeta,
+        )}) Tj ET`,
+      );
+
+      // Main Head Kop Banner Box (#0F3D3E)
+      const boxH = op.height - 22;
+      const boxY = topBarY - boxH;
       out.push(
         `0.059 0.239 0.243 rg ${MARGIN_L} ${boxY.toFixed(1)} ${CONTENT_W.toFixed(1)} ${boxH.toFixed(1)} re f`,
       );
-      // Garis aksen emerald di tepi bawah banner
       out.push(
-        `0.063 0.725 0.506 rg ${MARGIN_L} ${boxY.toFixed(1)} ${CONTENT_W.toFixed(1)} 2.5 re f`,
+        `1 1 1 rg BT /F2 12.5 Tf ${(MARGIN_L + 12).toFixed(1)} ${(boxY + boxH - 17).toFixed(1)} Td (${escapePdfString(
+          op.title,
+        )}) Tj ET`,
       );
       out.push(
-        `1 1 1 rg BT /F2 13 Tf ${(MARGIN_L + 12).toFixed(1)} ${(boxY + boxH - 19).toFixed(1)} Td (${escapePdfString(op.title)}) Tj ET`,
+        `0.78 0.96 0.88 rg BT /F1 8.2 Tf ${(MARGIN_L + 12).toFixed(1)} ${(boxY + 8).toFixed(1)} Td (${escapePdfString(
+          op.subtitle,
+        )}) Tj ET`,
+      );
+
+      // Architectural Double Line Kop Rule under banner
+      const rule1Y = boxY - 2;
+      const rule2Y = boxY - 4.5;
+      out.push(
+        `0.059 0.239 0.243 RG 1.8 w ${MARGIN_L} ${rule1Y.toFixed(1)} m ${(MARGIN_L + CONTENT_W).toFixed(1)} ${rule1Y.toFixed(1)} l S`,
       );
       out.push(
-        `0.78 0.96 0.88 rg BT /F1 8.5 Tf ${(MARGIN_L + 12).toFixed(1)} ${(boxY + 10).toFixed(1)} Td (${escapePdfString(op.subtitle)}) Tj ET`,
+        `0.063 0.725 0.506 RG 0.7 w ${MARGIN_L} ${rule2Y.toFixed(1)} m ${(MARGIN_L + CONTENT_W).toFixed(1)} ${rule2Y.toFixed(1)} l S`,
+      );
+    } else if (op.kind === "tail_kop") {
+      const topRuleY = y - 4;
+      // Double Divider Rule above Tail Kop
+      out.push(
+        `0.059 0.239 0.243 RG 1.4 w ${MARGIN_L} ${topRuleY.toFixed(1)} m ${(MARGIN_L + CONTENT_W).toFixed(1)} ${topRuleY.toFixed(1)} l S`,
+      );
+      out.push(
+        `0.063 0.725 0.506 RG 0.6 w ${MARGIN_L} ${(topRuleY - 2.2).toFixed(1)} m ${(MARGIN_L + CONTENT_W).toFixed(1)} ${(topRuleY - 2.2).toFixed(1)} l S`,
+      );
+
+      // Tail Kop Header Bar
+      const hdrY = topRuleY - 16;
+      out.push(
+        `0.945 0.961 0.976 rg ${MARGIN_L} ${hdrY.toFixed(1)} ${CONTENT_W.toFixed(1)} 12 re f`,
+      );
+      out.push(
+        `0.059 0.239 0.243 rg BT /F2 7.5 Tf ${(MARGIN_L + 8).toFixed(1)} ${(hdrY + 3).toFixed(1)} Td (${escapePdfString(
+          "TAIL KOP PENGESAHAN, VERIFIKASI MUTU & OTORISASI DOKUMEN",
+        )}) Tj ET`,
+      );
+      const docTag = `KODE VERIFIKASI: ${op.docCode}`;
+      const docTagW = estimateTextWidth(docTag, 7.2, false);
+      out.push(
+        `0.35 0.42 0.50 rg BT /F1 7.2 Tf ${(MARGIN_L + CONTENT_W - docTagW - 8).toFixed(1)} ${(hdrY + 3).toFixed(1)} Td (${escapePdfString(
+          docTag,
+        )}) Tj ET`,
+      );
+
+      // 3-Column Signature & Verification Boxes
+      const colGap = 8;
+      const colW = (CONTENT_W - colGap * 2) / 3;
+      const boxH = 42;
+      const boxY = hdrY - boxH - 3;
+      const roles = [op.leftRole, op.centerRole, op.rightRole];
+
+      roles.forEach((role, idx) => {
+        const bx = MARGIN_L + idx * (colW + colGap);
+        out.push(
+          `0.985 0.990 0.995 rg ${bx.toFixed(1)} ${boxY.toFixed(1)} ${colW.toFixed(1)} ${boxH.toFixed(1)} re f`,
+        );
+        out.push(
+          `0.78 0.83 0.88 RG 0.6 w ${bx.toFixed(1)} ${boxY.toFixed(1)} ${colW.toFixed(1)} ${boxH.toFixed(1)} re S`,
+        );
+        out.push(
+          `0.059 0.239 0.243 rg BT /F2 7.5 Tf ${(bx + 6).toFixed(1)} ${(boxY + boxH - 11).toFixed(1)} Td (${escapePdfString(
+            truncateText(role, 32),
+          )}) Tj ET`,
+        );
+        // Dotted signature line
+        out.push(
+          `0.65 0.72 0.80 RG 0.5 w ${(bx + 8).toFixed(1)} ${(boxY + 13).toFixed(1)} m ${(bx + colW - 8).toFixed(1)} ${(boxY + 13).toFixed(1)} l S`,
+        );
+        out.push(
+          `0.42 0.48 0.56 rg BT /F1 6.8 Tf ${(bx + 8).toFixed(1)} ${(boxY + 4).toFixed(1)} Td (${escapePdfString(
+            "Nama / Paraf & Stempel / Tanggal",
+          )}) Tj ET`,
+        );
+      });
+
+      // Reference & Scientific Integrity Strip at bottom of Tail Kop
+      const refY = boxY - 12;
+      out.push(
+        `0.35 0.42 0.50 rg BT /F1 7.0 Tf ${MARGIN_L} ${refY.toFixed(1)} Td (${escapePdfString(
+          truncateText(op.referenceNote, 112),
+        )}) Tj ET`,
       );
     } else if (op.kind === "alert") {
       const boxY = y - op.height + 4;
@@ -253,7 +392,7 @@ function renderStructuredPageStream(
       );
       const valFont = op.boldValue ? "/F2" : "/F1";
       out.push(
-        `0.059 0.090 0.165 rg BT ${valFont} 8.5 Tf ${(MARGIN_L + 102).toFixed(1)} ${baseY.toFixed(1)} Td (${escapePdfString(truncateText(op.value, 85))}) Tj ET`,
+        `0.059 0.090 0.165 rg BT ${valFont} 8.5 Tf ${(MARGIN_L + 108).toFixed(1)} ${baseY.toFixed(1)} Td (${escapePdfString(truncateText(op.value, 85))}) Tj ET`,
       );
     } else if (op.kind === "table_header") {
       const rectY = y - op.height + 2;
@@ -265,7 +404,7 @@ function renderStructuredPageStream(
         `0.796 0.835 0.882 RG 0.6 w ${MARGIN_L} ${rectY.toFixed(1)} m ${(MARGIN_L + CONTENT_W).toFixed(1)} ${rectY.toFixed(1)} l S`,
       );
       for (const cell of op.cells) {
-        drawAlignedCell(out, cell, rectY + 5, 8, true, "0.20 0.25 0.33");
+        drawAlignedCell(out, cell, rectY + 5, 7.8, true, "0.20 0.25 0.33");
       }
     } else if (op.kind === "table_row") {
       const rectY = y - op.height + 1;
@@ -279,7 +418,7 @@ function renderStructuredPageStream(
         `0.886 0.910 0.941 RG 0.4 w ${MARGIN_L} ${rectY.toFixed(1)} m ${(MARGIN_L + CONTENT_W).toFixed(1)} ${rectY.toFixed(1)} l S`,
       );
       for (const cell of op.cells) {
-        drawAlignedCell(out, cell, rectY + 4.5, 8, op.bold === true);
+        drawAlignedCell(out, cell, rectY + 4.5, 7.8, op.bold === true);
       }
     } else if (op.kind === "text") {
       const size = op.size ?? 8.5;
@@ -292,17 +431,22 @@ function renderStructuredPageStream(
     y -= op.height;
   }
 
-  // Footer rapi dengan garis tipis dan nomor halaman
-  out.push(`0.85 0.88 0.92 RG 0.5 w ${MARGIN_L} 38 m ${(MARGIN_L + CONTENT_W).toFixed(1)} 38 l S`);
+  // Page Footer (Tail Kop Halaman) dengan garis ganda dan identitas dokumen
   out.push(
-    `0.42 0.48 0.56 rg BT /F1 7.5 Tf ${MARGIN_L} 26 Td (${escapePdfString(
-      "OpenFormu — Formulasi Pakan Ternak Presisi",
+    `0.059 0.239 0.243 RG 0.8 w ${MARGIN_L} 40 m ${(MARGIN_L + CONTENT_W).toFixed(1)} 40 l S`,
+  );
+  out.push(
+    `0.063 0.725 0.506 RG 0.4 w ${MARGIN_L} 38 m ${(MARGIN_L + CONTENT_W).toFixed(1)} 38 l S`,
+  );
+  out.push(
+    `0.35 0.42 0.50 rg BT /F2 7.2 Tf ${MARGIN_L} 27 Td (${escapePdfString(
+      `OpenFormu — Sistem Formulasi Ransum Presisi | Dok: ${runningDocCode}`,
     )}) Tj ET`,
   );
   const pageTag = `Halaman ${pageNum} / ${totalPages}`;
-  const pageTagW = estimateTextWidth(pageTag, 7.5, false);
+  const pageTagW = estimateTextWidth(pageTag, 7.2, true);
   out.push(
-    `0.42 0.48 0.56 rg BT /F1 7.5 Tf ${(MARGIN_L + CONTENT_W - pageTagW).toFixed(1)} 26 Td (${escapePdfString(pageTag)}) Tj ET`,
+    `0.35 0.42 0.50 rg BT /F2 7.2 Tf ${(MARGIN_L + CONTENT_W - pageTagW).toFixed(1)} 27 Td (${escapePdfString(pageTag)}) Tj ET`,
   );
 
   return out.join("\n");
@@ -364,10 +508,14 @@ function assemblePdfDocument(pageStreams: readonly string[]): Uint8Array {
   return encoder.encode(chunks.join(""));
 }
 
-function renderOpsToPdf(ops: readonly PdfRowOp[]): Uint8Array {
+function renderOpsToPdf(
+  ops: readonly PdfRowOp[],
+  runningTitle = "OPENFORMU - DOKUMEN FORMULASI",
+  runningDocCode = "OF-DOC-001",
+): Uint8Array {
   const pages = paginateOps(ops);
   const streams = pages.map((pageOps, idx) =>
-    renderStructuredPageStream(pageOps, idx + 1, pages.length),
+    renderStructuredPageStream(pageOps, idx + 1, pages.length, runningTitle, runningDocCode),
   );
   return assemblePdfDocument(streams);
 }
@@ -390,20 +538,30 @@ export function generateFormulationPdf(input: PdfExportInput): Uint8Array {
   const nutMap = new Map(nutrientsCatalog.map((n) => [n.id, n]));
   const batchKg = result.batchSizeKg ?? 100;
   const dateStr = new Date().toLocaleDateString("id-ID");
+  const docCode =
+    mode === "batch_only"
+      ? `OF-BTH-${Math.round(batchKg)}KG`
+      : `OF-RSL-${result.basis === "dry_matter" ? "BK" : "AF"}`;
+  const rationDmPct = computeRationDryMatterPct(result.composition, ingredients);
+  const dmiEst = estimateDailyConsumption(requirement, rationDmPct);
 
   const ops: PdfRowOp[] = [];
+  const docTitle =
+    mode === "batch_only"
+      ? "OPENFORMU - LEMBAR TIMBANG BATCH PRODUKSI"
+      : "OPENFORMU - LAPORAN FORMULASI PAKAN LENGKAP";
 
   ops.push({
-    kind: "banner",
-    title:
-      mode === "batch_only"
-        ? "OPENFORMU - LEMBAR TIMBANG BATCH PRODUKSI"
-        : "OPENFORMU - LAPORAN FORMULASI PAKAN LENGKAP",
+    kind: "head_kop",
+    docCode,
+    institutionTitle: "OPENFORMU | SISTEM FORMULASI RANSUM & NUTRISI TERNAK PRESISI",
+    title: docTitle,
     subtitle:
       mode === "batch_only"
-        ? `Instruksi Penimbangan Operator Gudang (Tanpa Harga & Target Nutrisi) | Dicetak: ${dateStr}`
-        : `Laporan Komposisi, Biaya, Profil Nutrien & Harga Bayangan | Dicetak: ${dateStr}`,
-    height: 46,
+        ? `Instruksi Penimbangan Operator Gudang (2 Versi Presisi xx,xxx & Bulat)`
+        : `Laporan Komposisi, Konsumsi Harian (BK & Segar), Profil Nutrien & Harga Bayangan`,
+    printedAt: dateStr,
+    height: 62,
   });
 
   if (result.status === "near_feasible") {
@@ -425,15 +583,27 @@ export function generateFormulationPdf(input: PdfExportInput): Uint8Array {
   ops.push({
     kind: "kv",
     label: "Basis & Skala",
-    value: `${result.basis === "dry_matter" ? "Bahan Kering (BK / DM)" : "As-Fed"} | Status: ${result.status.toUpperCase()} | Batch: ${batchKg.toFixed(1)} kg`,
+    value: `${result.basis === "dry_matter" ? "Bahan Kering (BK / DM)" : "As-Fed"} | Status: ${result.status.toUpperCase()} | Batch: ${batchKg.toFixed(1)} kg | Kadar BK Ransum: ${rationDmPct.toFixed(1)}%`,
+    height: 14,
+  });
+  ops.push({
+    kind: "kv",
+    label: "Konsumsi Harian",
+    value: `BK: ${dmiEst.dmiKgPerHead.toFixed(3)} kg/ekor/hr | Segar (As-Fed): ${dmiEst.asFedKgPerHead.toFixed(3)} kg/ekor/hr (${dmiEst.dmiPctBw ? `${dmiEst.dmiPctBw.toFixed(2)}% BB` : dmiEst.sourceNoteId})`,
+    boldValue: true,
     height: 14,
   });
 
   if (mode === "full") {
+    const dailyCost =
+      result.costPerKg !== null
+        ? (result.basis === "dry_matter" ? dmiEst.dmiKgPerHead : dmiEst.asFedKgPerHead) *
+          result.costPerKg
+        : null;
     ops.push({
       kind: "kv",
       label: "Biaya Ransum",
-      value: `${formatIdr(result.costPerKg)} / kg   |   Total Batch (${batchKg.toFixed(0)} kg): ${formatIdr(result.batchTotalCost)}`,
+      value: `${formatIdr(result.costPerKg)} / kg | Total Batch (${batchKg.toFixed(0)} kg): ${formatIdr(result.batchTotalCost)} | Biaya Harian: ${formatIdr(dailyCost)}/ekor/hr`,
       boldValue: true,
       height: 16,
     });
@@ -442,7 +612,7 @@ export function generateFormulationPdf(input: PdfExportInput): Uint8Array {
   ops.push({ kind: "spacer", height: 6 });
   ops.push({
     kind: "section",
-    title: "1. KOMPOSISI BAHAN & TAKARAN TIMBANG AKTUAL",
+    title: "1. KOMPOSISI BAHAN & TAKARAN TIMBANG 2-VERSI (PRESISI xx,xxx & BULAT)",
     height: 20,
   });
 
@@ -451,12 +621,13 @@ export function generateFormulationPdf(input: PdfExportInput): Uint8Array {
       kind: "table_header",
       height: 18,
       cells: [
-        { text: "No", x: MARGIN_L + 4, width: 22, align: "left" },
-        { text: "Nama Bahan Pakan", x: MARGIN_L + 28, width: 245, align: "left" },
-        { text: "Porsi %", x: MARGIN_L + 278, width: 58, align: "right" },
-        { text: "As-Fed %", x: MARGIN_L + 340, width: 62, align: "right" },
-        { text: "Berat (kg)", x: MARGIN_L + 406, width: 68, align: "right" },
-        { text: "Cek", x: MARGIN_L + 480, width: 32, align: "center" },
+        { text: "No", x: MARGIN_L + 3, width: 18, align: "left" },
+        { text: "Nama Bahan Pakan", x: MARGIN_L + 23, width: 200, align: "left" },
+        { text: "Porsi %", x: MARGIN_L + 225, width: 52, align: "right" },
+        { text: "As-Fed %", x: MARGIN_L + 280, width: 52, align: "right" },
+        { text: "Presisi (kg)", x: MARGIN_L + 335, width: 68, align: "right" },
+        { text: "Bulat (kg)", x: MARGIN_L + 406, width: 64, align: "right" },
+        { text: "Cek", x: MARGIN_L + 476, width: 34, align: "center" },
       ],
     });
   } else {
@@ -464,13 +635,14 @@ export function generateFormulationPdf(input: PdfExportInput): Uint8Array {
       kind: "table_header",
       height: 18,
       cells: [
-        { text: "No", x: MARGIN_L + 4, width: 20, align: "left" },
-        { text: "Nama Bahan Pakan", x: MARGIN_L + 26, width: 196, align: "left" },
-        { text: "Basis %", x: MARGIN_L + 224, width: 48, align: "right" },
-        { text: "As-Fed %", x: MARGIN_L + 276, width: 50, align: "right" },
-        { text: "Berat (kg)", x: MARGIN_L + 330, width: 58, align: "right" },
-        { text: "Harga/kg", x: MARGIN_L + 392, width: 60, align: "right" },
-        { text: "Subtotal", x: MARGIN_L + 455, width: 58, align: "right" },
+        { text: "No", x: MARGIN_L + 3, width: 18, align: "left" },
+        { text: "Nama Bahan Pakan", x: MARGIN_L + 22, width: 166, align: "left" },
+        { text: "Basis %", x: MARGIN_L + 190, width: 46, align: "right" },
+        { text: "As-Fed %", x: MARGIN_L + 238, width: 46, align: "right" },
+        { text: "Presisi (kg)", x: MARGIN_L + 286, width: 56, align: "right" },
+        { text: "Bulat (kg)", x: MARGIN_L + 344, width: 50, align: "right" },
+        { text: "Harga/kg", x: MARGIN_L + 396, width: 56, align: "right" },
+        { text: "Subtotal", x: MARGIN_L + 454, width: 58, align: "right" },
       ],
     });
   }
@@ -486,8 +658,6 @@ export function generateFormulationPdf(input: PdfExportInput): Uint8Array {
     totalAsFed += asFedPct;
 
     const modelPct = item.fraction * 100;
-    const modelDigits = resolveDisplayDigits("%", "inclusion", decimalPlaces, modelPct);
-    const asFedDigits = resolveDisplayDigits("%", "inclusion", decimalPlaces, asFedPct);
     const weightDigits = Math.max(1, decimalPlaces);
 
     if (mode === "batch_only") {
@@ -496,34 +666,40 @@ export function generateFormulationPdf(input: PdfExportInput): Uint8Array {
         shaded: idx % 2 === 1,
         height: 16,
         cells: [
-          { text: String(idx + 1), x: MARGIN_L + 4, width: 22, align: "left" },
+          { text: String(idx + 1), x: MARGIN_L + 3, width: 18, align: "left" },
           {
             text: ing?.name ?? item.ingredientId,
-            x: MARGIN_L + 28,
-            width: 245,
+            x: MARGIN_L + 23,
+            width: 200,
             align: "left",
-            maxChars: 44,
+            maxChars: 38,
           },
           {
-            text: `${formatNum(modelPct, modelDigits)}%`,
-            x: MARGIN_L + 278,
-            width: 58,
+            text: `${formatNum(modelPct, 3)}%`,
+            x: MARGIN_L + 225,
+            width: 52,
             align: "right",
           },
           {
-            text: `${formatNum(asFedPct, asFedDigits)}%`,
-            x: MARGIN_L + 340,
-            width: 62,
+            text: `${formatNum(asFedPct, 3)}%`,
+            x: MARGIN_L + 280,
+            width: 52,
             align: "right",
           },
           {
-            text: `${formatNum(weight, weightDigits)} kg`,
-            x: MARGIN_L + 406,
+            text: `${formatNum(weight, 3)} kg`,
+            x: MARGIN_L + 335,
             width: 68,
             align: "right",
             bold: true,
           },
-          { text: "[  ]", x: MARGIN_L + 480, width: 32, align: "center" },
+          {
+            text: `${formatNum(weight, weightDigits)} kg`,
+            x: MARGIN_L + 406,
+            width: 64,
+            align: "right",
+          },
+          { text: "[  ]", x: MARGIN_L + 476, width: 34, align: "center" },
         ],
       });
     } else {
@@ -532,37 +708,43 @@ export function generateFormulationPdf(input: PdfExportInput): Uint8Array {
         shaded: idx % 2 === 1,
         height: 16,
         cells: [
-          { text: String(idx + 1), x: MARGIN_L + 4, width: 20, align: "left" },
+          { text: String(idx + 1), x: MARGIN_L + 3, width: 18, align: "left" },
           {
             text: ing?.name ?? item.ingredientId,
-            x: MARGIN_L + 26,
-            width: 196,
+            x: MARGIN_L + 22,
+            width: 166,
             align: "left",
-            maxChars: 36,
+            maxChars: 31,
           },
           {
-            text: `${formatNum(modelPct, modelDigits)}%`,
-            x: MARGIN_L + 224,
-            width: 48,
+            text: `${formatNum(modelPct, 3)}%`,
+            x: MARGIN_L + 190,
+            width: 46,
             align: "right",
           },
           {
-            text: `${formatNum(asFedPct, asFedDigits)}%`,
-            x: MARGIN_L + 276,
-            width: 50,
+            text: `${formatNum(asFedPct, 3)}%`,
+            x: MARGIN_L + 238,
+            width: 46,
             align: "right",
           },
           {
-            text: `${formatNum(weight, weightDigits)}`,
-            x: MARGIN_L + 330,
-            width: 58,
+            text: formatNum(weight, 3),
+            x: MARGIN_L + 286,
+            width: 56,
             align: "right",
             bold: true,
           },
-          { text: formatIdr(activePrice), x: MARGIN_L + 392, width: 60, align: "right" },
+          {
+            text: formatNum(weight, weightDigits),
+            x: MARGIN_L + 344,
+            width: 50,
+            align: "right",
+          },
+          { text: formatIdr(activePrice), x: MARGIN_L + 396, width: 56, align: "right" },
           {
             text: formatIdr(item.costContribution ?? 0),
-            x: MARGIN_L + 455,
+            x: MARGIN_L + 454,
             width: 58,
             align: "right",
           },
@@ -571,8 +753,6 @@ export function generateFormulationPdf(input: PdfExportInput): Uint8Array {
     }
   });
 
-  const totalPctDigits = resolveDisplayDigits("%", "inclusion", decimalPlaces, 100);
-  const totalAsFedDigits = resolveDisplayDigits("%", "inclusion", decimalPlaces, totalAsFed);
   const totalWeightDigits = Math.max(1, decimalPlaces);
 
   ops.push({
@@ -583,49 +763,61 @@ export function generateFormulationPdf(input: PdfExportInput): Uint8Array {
     cells:
       mode === "batch_only"
         ? [
-            { text: "TOTAL KOMPOSISI", x: MARGIN_L + 28, width: 245, align: "left" },
+            { text: "TOTAL KOMPOSISI", x: MARGIN_L + 23, width: 200, align: "left" },
             {
-              text: `${formatNum(100, totalPctDigits)}%`,
-              x: MARGIN_L + 278,
-              width: 58,
+              text: "100.000%",
+              x: MARGIN_L + 225,
+              width: 52,
               align: "right",
             },
             {
-              text: `${formatNum(totalAsFed, totalAsFedDigits)}%`,
-              x: MARGIN_L + 340,
-              width: 62,
+              text: `${formatNum(totalAsFed, 3)}%`,
+              x: MARGIN_L + 280,
+              width: 52,
+              align: "right",
+            },
+            {
+              text: `${formatNum(totalWeight, 3)} kg`,
+              x: MARGIN_L + 335,
+              width: 68,
               align: "right",
             },
             {
               text: `${formatNum(totalWeight, totalWeightDigits)} kg`,
               x: MARGIN_L + 406,
-              width: 68,
+              width: 64,
               align: "right",
             },
           ]
         : [
-            { text: "TOTAL KOMPOSISI", x: MARGIN_L + 26, width: 196, align: "left" },
+            { text: "TOTAL KOMPOSISI", x: MARGIN_L + 22, width: 166, align: "left" },
             {
-              text: `${formatNum(100, totalPctDigits)}%`,
-              x: MARGIN_L + 224,
-              width: 48,
+              text: "100.000%",
+              x: MARGIN_L + 190,
+              width: 46,
               align: "right",
             },
             {
-              text: `${formatNum(totalAsFed, totalAsFedDigits)}%`,
-              x: MARGIN_L + 276,
-              width: 50,
+              text: `${formatNum(totalAsFed, 3)}%`,
+              x: MARGIN_L + 238,
+              width: 46,
+              align: "right",
+            },
+            {
+              text: `${formatNum(totalWeight, 3)} kg`,
+              x: MARGIN_L + 286,
+              width: 56,
               align: "right",
             },
             {
               text: `${formatNum(totalWeight, totalWeightDigits)} kg`,
-              x: MARGIN_L + 330,
-              width: 58,
+              x: MARGIN_L + 344,
+              width: 50,
               align: "right",
             },
             {
               text: formatIdr(result.batchTotalCost),
-              x: MARGIN_L + 455,
+              x: MARGIN_L + 454,
               width: 58,
               align: "right",
             },
@@ -634,17 +826,22 @@ export function generateFormulationPdf(input: PdfExportInput): Uint8Array {
 
   if (mode === "full") {
     ops.push({ kind: "spacer", height: 10 });
-    ops.push({ kind: "section", title: "2. PROFIL NUTRIEN AKTUAL VS TARGET", height: 20 });
+    ops.push({
+      kind: "section",
+      title: "2. PROFIL NUTRIEN AKTUAL (PRESISI 0,00x & BULAT) VS TARGET",
+      height: 20,
+    });
     ops.push({
       kind: "table_header",
       height: 18,
       cells: [
-        { text: "Nutrien", x: MARGIN_L + 4, width: 190, align: "left" },
-        { text: "Satuan", x: MARGIN_L + 198, width: 54, align: "left" },
-        { text: "Aktual", x: MARGIN_L + 256, width: 62, align: "right" },
-        { text: "Min", x: MARGIN_L + 322, width: 56, align: "right" },
-        { text: "Max", x: MARGIN_L + 382, width: 56, align: "right" },
-        { text: "Status", x: MARGIN_L + 444, width: 68, align: "right" },
+        { text: "Nutrien", x: MARGIN_L + 4, width: 165, align: "left" },
+        { text: "Satuan", x: MARGIN_L + 172, width: 44, align: "left" },
+        { text: "Presisi 0,00x", x: MARGIN_L + 220, width: 62, align: "right" },
+        { text: "Bulat", x: MARGIN_L + 286, width: 52, align: "right" },
+        { text: "Min", x: MARGIN_L + 342, width: 48, align: "right" },
+        { text: "Max", x: MARGIN_L + 394, width: 48, align: "right" },
+        { text: "Status", x: MARGIN_L + 446, width: 66, align: "right" },
       ],
     });
 
@@ -669,21 +866,27 @@ export function generateFormulationPdf(input: PdfExportInput): Uint8Array {
           {
             text: meta?.name ?? nr.nutrientId,
             x: MARGIN_L + 4,
-            width: 190,
+            width: 165,
             align: "left",
-            maxChars: 34,
+            maxChars: 30,
           },
-          { text: meta?.unit ?? "%", x: MARGIN_L + 198, width: 54, align: "left" },
+          { text: meta?.unit ?? "%", x: MARGIN_L + 172, width: 44, align: "left" },
           {
-            text: formatNum(nr.value, digits),
-            x: MARGIN_L + 256,
+            text: formatNum(nr.value, 3),
+            x: MARGIN_L + 220,
             width: 62,
             align: "right",
             bold: true,
           },
-          { text: formatNum(nr.min, minDigits), x: MARGIN_L + 322, width: 56, align: "right" },
-          { text: formatNum(nr.max, maxDigits), x: MARGIN_L + 382, width: 56, align: "right" },
-          { text: statusLabel, x: MARGIN_L + 444, width: 68, align: "right" },
+          {
+            text: formatNum(nr.value, digits),
+            x: MARGIN_L + 286,
+            width: 52,
+            align: "right",
+          },
+          { text: formatNum(nr.min, minDigits), x: MARGIN_L + 342, width: 48, align: "right" },
+          { text: formatNum(nr.max, maxDigits), x: MARGIN_L + 394, width: 48, align: "right" },
+          { text: statusLabel, x: MARGIN_L + 446, width: 66, align: "right" },
         ],
       });
     });
@@ -737,7 +940,19 @@ export function generateFormulationPdf(input: PdfExportInput): Uint8Array {
     }
   }
 
-  return renderOpsToPdf(ops);
+  ops.push({ kind: "spacer", height: 10 });
+  ops.push({
+    kind: "tail_kop",
+    docCode,
+    leftRole: "1. Disusun Oleh (Nutrisionis / Formulator)",
+    centerRole: "2. Diverifikasi Oleh (QC / Kepala Gudang)",
+    rightRole: "3. Disetujui Oleh (Manajer Peternakan)",
+    referenceNote:
+      "Referensi Ilmiah: SNI (BSN) | NRC Poultry 9th Ed (1994) | NRC Dairy (1988) | Kearl (1982) | Hartadi et al. (1980) | Solver LP HiGHS 1e-6",
+    height: 82,
+  });
+
+  return renderOpsToPdf(ops, docTitle, docCode);
 }
 
 /**
@@ -751,13 +966,18 @@ export function generateIngredientDatabasePdf(input: IngredientDatabasePdfInput)
     decimalPlaces = 0,
   } = input;
   const dateStr = new Date().toLocaleDateString("id-ID");
+  const docCode = `OF-DB-${ingredients.length}ING`;
+  const docTitle = `OPENFORMU - ${title}`;
 
   const ops: PdfRowOp[] = [
     {
-      kind: "banner",
-      title: `OPENFORMU - ${title}`,
-      subtitle: `Total ${ingredients.length} bahan pakan dikelompokkan berdasarkan 8 kelas standar internasional | Dicetak: ${dateStr}`,
-      height: 46,
+      kind: "head_kop",
+      docCode,
+      institutionTitle: "OPENFORMU | KATALOG LABORATORIUM NUTRISI & KLASIFIKASI IFN",
+      title: docTitle,
+      subtitle: `Total ${ingredients.length} bahan pakan dikelompokkan berdasarkan 8 kelas standar internasional`,
+      printedAt: dateStr,
+      height: 62,
     },
     { kind: "spacer", height: 6 },
   ];
@@ -882,7 +1102,18 @@ export function generateIngredientDatabasePdf(input: IngredientDatabasePdfInput)
     ops.push({ kind: "spacer", height: 8 });
   }
 
-  return renderOpsToPdf(ops);
+  ops.push({
+    kind: "tail_kop",
+    docCode,
+    leftRole: "1. Disusun Oleh (Analis Lab Nutrisi)",
+    centerRole: "2. Diverifikasi Oleh (Kepala QC Pakan)",
+    rightRole: "3. Disahkan Oleh (Manajer Nutrisi)",
+    referenceNote:
+      "Sumber Pustaka: Hartadi et al. (1980) | Kearl (1982) | NRC Poultry 9th Ed (1994) | NRC Dairy (1988) | 8 Kelas IFN",
+    height: 82,
+  });
+
+  return renderOpsToPdf(ops, docTitle, docCode);
 }
 
 /**
@@ -911,13 +1142,18 @@ export function generateRecipePdf(input: RecipePdfInput): Uint8Array {
   const nutMap = new Map(nutrientsCatalog.map((n) => [n.id, n]));
   const activeFeeds = recipe.ingredients.filter((i) => i.isActive !== false);
   const dateStr = new Date().toLocaleDateString("id-ID");
+  const docCode = `OF-RCP-${activeFeeds.length}ACT`;
+  const docTitle = "OPENFORMU - RINGKASAN PROJECT RESEP";
 
   const ops: PdfRowOp[] = [
     {
-      kind: "banner",
-      title: "OPENFORMU - RINGKASAN PROJECT RESEP",
-      subtitle: `Dokumen Spesifikasi Bahan & Target Nutrien | Dicetak: ${dateStr}`,
-      height: 46,
+      kind: "head_kop",
+      docCode,
+      institutionTitle: "OPENFORMU | ARSIP SPESIFIKASI PROJECT RESEP & STANDAR NUTRIEN",
+      title: docTitle,
+      subtitle: `Dokumen Spesifikasi Bahan & Target Nutrien`,
+      printedAt: dateStr,
+      height: 62,
     },
     { kind: "spacer", height: 6 },
     { kind: "kv", label: "Nama Resep", value: recipe.name, boldValue: true, height: 14 },
@@ -1036,5 +1272,17 @@ export function generateRecipePdf(input: RecipePdfInput): Uint8Array {
       });
     });
 
-  return renderOpsToPdf(ops);
+  ops.push({ kind: "spacer", height: 10 });
+  ops.push({
+    kind: "tail_kop",
+    docCode,
+    leftRole: "1. Disusun Oleh (Formulator)",
+    centerRole: "2. Diverifikasi Oleh (Supervisor Pakan)",
+    rightRole: "3. Disetujui Oleh (Manajer Unit)",
+    referenceNote:
+      "Referensi Standar: SNI (BSN) | NRC Poultry 9th Ed (1994) | NRC Dairy (1988) | Kearl (1982) | Hartadi et al. (1980)",
+    height: 82,
+  });
+
+  return renderOpsToPdf(ops, docTitle, docCode);
 }

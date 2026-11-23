@@ -27,11 +27,12 @@ import type {
 } from "../../types";
 import { cn } from "../../utils/cn";
 import { handleExternalLinkClick } from "../../utils/external-link";
+import { resolveDisplayDigits } from "../../utils/locale-number";
+import { NumericCellInput } from "../formulation/NumericCellInput";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { GlossySquircleIcon } from "../ui/GlossySquircleIcon";
-import { Input } from "../ui/Input";
 import { SegmentedTabs } from "../ui/SegmentedTabs";
 import { Switch } from "../ui/Switch";
 import { ThemedSelect } from "../ui/ThemedSelect";
@@ -90,8 +91,10 @@ export const SettingsPage = memo(function SettingsPage({
   const [settingsTab, setSettingsTab] = useState<SettingsSectionTab>("basic");
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<"reset" | "clear" | null>(null);
   const themeCtx = useOptionalThemeContext();
+  const isAntiSlop = themeCtx?.uiMode === "anti-slop";
 
   const lang = preferences.language;
   const activeTier: TableViewTier =
@@ -141,6 +144,7 @@ export const SettingsPage = memo(function SettingsPage({
       themePalette: next.paletteId,
       themeModeSetting: next.modeSetting,
       amoledPureBlack: next.amoledPureBlack,
+      ...(next.uiMode !== undefined ? { uiMode: next.uiMode } : {}),
       ...(next.uiEnhancer !== undefined ? { uiEnhancer: next.uiEnhancer } : {}),
     });
   };
@@ -180,6 +184,8 @@ export const SettingsPage = memo(function SettingsPage({
   const handleResetSamples = async () => {
     if (!onResetSampleData) return;
     setBusyAction("reset");
+    setActionError(null);
+    setActionNotice(null);
     try {
       await onResetSampleData();
       setActionNotice(
@@ -189,6 +195,12 @@ export const SettingsPage = memo(function SettingsPage({
           "Default feed catalog, requirement standards, and initial config restored (your saved recipes stay safe).",
         ),
       );
+    } catch (err) {
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : pickLang(lang, "Gagal mereset data bawaan.", "Failed to reset sample data."),
+      );
     } finally {
       setBusyAction(null);
     }
@@ -197,6 +209,8 @@ export const SettingsPage = memo(function SettingsPage({
   const handleConfirmClearAll = async () => {
     if (!onClearAllUserData) return;
     setBusyAction("clear");
+    setActionError(null);
+    setActionNotice(null);
     try {
       await onClearAllUserData();
       setConfirmClearOpen(false);
@@ -206,6 +220,12 @@ export const SettingsPage = memo(function SettingsPage({
           "Seluruh data lokal dibersihkan dan dikembalikan ke kondisi awal.",
           "All local data cleared and restored to initial defaults.",
         ),
+      );
+    } catch (err) {
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : pickLang(lang, "Gagal menghapus data lokal.", "Failed to clear local data."),
       );
     } finally {
       setBusyAction(null);
@@ -312,16 +332,24 @@ export const SettingsPage = memo(function SettingsPage({
                       value: "1",
                       label: pickLang(
                         lang,
-                        "1 desimal (xx,0 — contoh 18,5%)",
-                        "1 decimal (xx.0 — e.g. 18.5%)",
+                        isAntiSlop
+                          ? "1 desimal (xx,0, contoh 18,5%)"
+                          : "1 desimal (xx,0 — contoh 18,5%)",
+                        isAntiSlop
+                          ? "1 decimal (xx.0, e.g. 18.5%)"
+                          : "1 decimal (xx.0 — e.g. 18.5%)",
                       ),
                     },
                     {
                       value: "2",
                       label: pickLang(
                         lang,
-                        "2 desimal (xx,00 — contoh 18,50%)",
-                        "2 decimals (xx.00 — e.g. 18.50%)",
+                        isAntiSlop
+                          ? "2 desimal (xx,00, contoh 18,50%)"
+                          : "2 desimal (xx,00 — contoh 18,50%)",
+                        isAntiSlop
+                          ? "2 decimals (xx.00, e.g. 18.50%)"
+                          : "2 decimals (xx.00 — e.g. 18.50%)",
                       ),
                     },
                   ]}
@@ -413,20 +441,28 @@ export const SettingsPage = memo(function SettingsPage({
                   )}
                 </p>
               </div>
-              <Input
-                numeric
-                type="number"
-                min={1}
-                value={preferences.defaultBatchKg}
-                onChange={(e) =>
-                  onUpdate({ defaultBatchKg: Math.max(1, Number(e.target.value) || 100) })
-                }
-                className="w-32"
-              />
+              <div className="w-32">
+                <NumericCellInput
+                  value={preferences.defaultBatchKg}
+                  min={1}
+                  treatSingleThousandDot
+                  fractionDigits={0}
+                  fallbackOnEmpty={preferences.defaultBatchKg}
+                  commitOnChange
+                  ariaLabel={pickLang(
+                    lang,
+                    "Ukuran Batch Adukan Default (kg)",
+                    "Default Batch Size (kg)",
+                  )}
+                  onCommit={(val) =>
+                    onUpdate({ defaultBatchKg: Math.max(1, Math.round(val ?? 100)) })
+                  }
+                />
+              </div>
             </div>
           </Card>
 
-          {/* Kartu 2: Tema & Palet Warna (UI Enhancer 7 Palet) */}
+          {/* Kartu 2: Tema, Palet Warna & Mode Tampilan Antarmuka */}
           <Card interactive={false} className="overflow-hidden">
             <ThemeSwitcherMenu
               language={lang}
@@ -502,10 +538,20 @@ export const SettingsPage = memo(function SettingsPage({
                     data-engine-preset={profile.id}
                     onClick={() => handleSelectEnginePreset(profile.id)}
                     className={cn(
-                      "flex cursor-pointer flex-col rounded-xl border p-3.5 text-left transition-[transform,border-color,background-color,box-shadow] duration-150 hover:-translate-y-0.5 active:scale-[0.98] motion-reduce:transform-none",
-                      selected
-                        ? "border-[var(--status-success)] bg-[var(--status-success-soft)] shadow-[0_6px_18px_-6px_var(--glow-success-pill,rgba(16,185,129,0.28))]"
-                        : "acrylic-subcard",
+                      "flex min-h-11 cursor-pointer flex-col border p-3.5 text-left transition-[transform,border-color,background-color,box-shadow] duration-150 motion-reduce:transform-none",
+                      isAntiSlop
+                        ? cn(
+                            "rounded-lg",
+                            selected
+                              ? "border-2 border-[var(--color-primary)] bg-[var(--status-success-soft)]"
+                              : "border-[var(--border-strong)] bg-[var(--bg-surface)] hover:border-[var(--color-primary)]",
+                          )
+                        : cn(
+                            "rounded-xl hover:-translate-y-0.5 active:scale-[0.98]",
+                            selected
+                              ? "border-[var(--status-success)] bg-[var(--status-success-soft)] shadow-[0_6px_18px_-6px_var(--glow-success-pill,rgba(16,185,129,0.28))]"
+                              : "acrylic-subcard",
+                          ),
                     )}
                   >
                     <span className="text-xs font-bold text-[var(--text-primary)]">
@@ -563,23 +609,33 @@ export const SettingsPage = memo(function SettingsPage({
                     "Cek update aplikasi terbaru di repositori GitHub",
                     "Check latest app updates on GitHub repository",
                   )}
-                  className="neu-cta-btn inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-[transform,filter] duration-150 hover:brightness-105 active:scale-[0.97] motion-reduce:transform-none"
+                  className={cn(
+                    "inline-flex min-h-11 cursor-pointer items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-[transform,filter,background-color] duration-150 md:min-h-8 motion-reduce:transform-none",
+                    isAntiSlop
+                      ? "rounded-lg border border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--text-on-primary)] hover:bg-[var(--color-primary-hover)]"
+                      : "neu-cta-btn rounded-xl hover:brightness-105 active:scale-[0.97]",
+                  )}
                 >
-                  <RefreshCw className="h-3.5 w-3.5" />
+                  <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
                   <span>
                     {pickLang(lang, "Cek Update di Repo GitHub", "Check Updates on GitHub")}
                   </span>
-                  <ExternalLink className="h-3 w-3 opacity-85" />
+                  <ExternalLink className="h-3 w-3 opacity-85" aria-hidden="true" />
                 </a>
                 <a
                   href={GITHUB_REPO_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => void handleExternalLinkClick(e, GITHUB_REPO_URL)}
-                  className="neu-pill-btn inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition-transform duration-150 active:scale-[0.97] motion-reduce:transform-none"
+                  className={cn(
+                    "inline-flex min-h-11 cursor-pointer items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[var(--text-primary)] transition-transform duration-150 md:min-h-8 motion-reduce:transform-none",
+                    isAntiSlop
+                      ? "rounded-lg border border-[var(--border-strong)] bg-[var(--bg-surface-elevated)] hover:border-[var(--color-primary)] hover:bg-[var(--bg-sunken)]"
+                      : "neu-pill-btn rounded-xl active:scale-[0.97]",
+                  )}
                 >
                   <span>{pickLang(lang, "Buka Repo", "Open Repo")}</span>
-                  <ExternalLink className="h-3 w-3 text-[var(--text-muted)]" />
+                  <ExternalLink className="h-3 w-3 text-[var(--text-muted)]" aria-hidden="true" />
                 </a>
               </div>
             </div>
@@ -634,7 +690,8 @@ export const SettingsPage = memo(function SettingsPage({
                         aria-pressed={selected}
                         onClick={() => handleSetTier(tier.id)}
                         className={cn(
-                          "cursor-pointer rounded-md px-3 py-1.5 text-xs font-semibold transition-[transform,background-color,color] duration-150 active:scale-[0.97] motion-reduce:transform-none",
+                          "min-h-11 cursor-pointer rounded-md px-3 py-1.5 text-xs font-semibold transition-[transform,background-color,color] duration-150 md:min-h-8 motion-reduce:transform-none",
+                          !isAntiSlop && "active:scale-[0.97]",
                           selected
                             ? tier.id === "advanced"
                               ? "bg-[var(--color-primary)] text-[var(--text-on-primary)] shadow-[var(--shadow-neu-flat)]"
@@ -720,26 +777,32 @@ export const SettingsPage = memo(function SettingsPage({
                   <span className="text-xs font-medium text-[var(--text-secondary)]">
                     {pickLang(lang, "Min %", "Min %")}
                   </span>
-                  <Input
-                    numeric
-                    type="number"
-                    min={0.1}
-                    max={25}
-                    step={0.5}
-                    disabled={!antiNolEnabled}
-                    aria-label={pickLang(
-                      lang,
-                      "Persentase minimum Anti-Nol",
-                      "Anti-Zero minimum percentage",
-                    )}
-                    value={antiNolMinPct}
-                    onChange={(e) => {
-                      const val = Math.max(0.1, Math.min(25, Number(e.target.value) || 1));
-                      onUpdate({ zeroInclusionDefaultPct: val });
-                      onSetGlobalZeroInclusion?.(antiNolEnabled, val);
-                    }}
-                    className="w-20"
-                  />
+                  <div className="w-20">
+                    <NumericCellInput
+                      min={0.001}
+                      max={25}
+                      fractionDigits={resolveDisplayDigits(
+                        "%",
+                        "min",
+                        preferences.decimalPlaces ?? 0,
+                        antiNolMinPct,
+                      )}
+                      fallbackOnEmpty={antiNolMinPct}
+                      commitOnChange
+                      disabled={!antiNolEnabled}
+                      ariaLabel={pickLang(
+                        lang,
+                        "Persentase minimum Anti-Nol",
+                        "Anti-Zero minimum percentage",
+                      )}
+                      value={antiNolMinPct}
+                      onCommit={(rawVal) => {
+                        const val = Math.max(0.001, Math.min(25, rawVal ?? 1));
+                        onUpdate({ zeroInclusionDefaultPct: val });
+                        onSetGlobalZeroInclusion?.(antiNolEnabled, val);
+                      }}
+                    />
+                  </div>
                 </div>
                 <Switch
                   checked={antiNolEnabled}
@@ -788,7 +851,10 @@ export const SettingsPage = memo(function SettingsPage({
             <div className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
               <div className="flex max-w-md items-start gap-2.5">
                 <Smartphone
-                  className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-secondary)]"
+                  className={cn(
+                    "mt-0.5 h-4 w-4 shrink-0",
+                    isAntiSlop ? "text-[var(--text-secondary)]" : "text-[var(--color-secondary)]",
+                  )}
                   aria-hidden="true"
                 />
                 <div>
@@ -888,7 +954,12 @@ export const SettingsPage = memo(function SettingsPage({
               </div>
 
               {storageWarnings.length > 0 && (
-                <div className="rounded-2xl border border-[var(--status-warning-border)] bg-[var(--status-warning-soft)] p-3 text-xs text-[var(--text-primary)]">
+                <div
+                  className={cn(
+                    "border border-[var(--status-warning-border)] bg-[var(--status-warning-soft)] p-3 text-xs text-[var(--text-primary)]",
+                    isAntiSlop ? "rounded-lg" : "rounded-2xl",
+                  )}
+                >
                   {storageWarnings.map((w) => (
                     <p key={w}>{w}</p>
                   ))}
@@ -898,16 +969,31 @@ export const SettingsPage = memo(function SettingsPage({
               {actionNotice && (
                 <div
                   role="status"
-                  className="rounded-2xl border border-[var(--status-success-border)] bg-[var(--status-success-soft)] p-3 text-xs font-medium text-[var(--text-primary)]"
+                  className={cn(
+                    "border border-[var(--status-success-border)] bg-[var(--status-success-soft)] p-3 text-xs font-medium text-[var(--text-primary)]",
+                    isAntiSlop ? "rounded-lg" : "rounded-2xl",
+                  )}
                 >
                   {actionNotice}
+                </div>
+              )}
+
+              {actionError && (
+                <div
+                  role="alert"
+                  className={cn(
+                    "border border-[var(--status-danger-border)] bg-[var(--status-danger-soft)] p-3 text-xs font-medium text-[var(--status-danger)]",
+                    isAntiSlop ? "rounded-lg" : "rounded-2xl",
+                  )}
+                >
+                  {actionError}
                 </div>
               )}
 
               <div className="flex flex-wrap gap-2">
                 {onExportAllBackup && (
                   <Button variant="secondary" size="sm" onClick={onExportAllBackup}>
-                    <Download className="h-3.5 w-3.5" />
+                    <Download className="h-3.5 w-3.5" aria-hidden="true" />
                     <span>{pickLang(lang, "Unduh Cadangan Data", "Download Backup")}</span>
                   </Button>
                 )}
@@ -919,8 +1005,12 @@ export const SettingsPage = memo(function SettingsPage({
                     disabled={busyAction !== null}
                     onClick={() => void handleResetSamples()}
                   >
-                    <RotateCcw className="h-3.5 w-3.5" />
-                    <span>{pickLang(lang, "Reset Data Bawaan", "Reset Sample Data")}</span>
+                    <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span>
+                      {busyAction === "reset"
+                        ? pickLang(lang, "Mereset...", "Resetting...")
+                        : pickLang(lang, "Reset Data Bawaan", "Reset Sample Data")}
+                    </span>
                   </Button>
                 )}
 
@@ -931,7 +1021,7 @@ export const SettingsPage = memo(function SettingsPage({
                     disabled={busyAction !== null}
                     onClick={() => setConfirmClearOpen(true)}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                     <span>{pickLang(lang, "Hapus Semua Data Lokal", "Clear All Local Data")}</span>
                   </Button>
                 )}
@@ -940,10 +1030,16 @@ export const SettingsPage = memo(function SettingsPage({
               {confirmClearOpen && onClearAllUserData && (
                 <div
                   role="alert"
-                  className="rounded-2xl border border-[var(--status-danger-border)] bg-[var(--status-danger-soft)] p-3.5 text-xs text-[var(--text-primary)]"
+                  className={cn(
+                    "border border-[var(--status-danger-border)] bg-[var(--status-danger-soft)] p-3.5 text-xs text-[var(--text-primary)]",
+                    isAntiSlop ? "rounded-lg" : "rounded-2xl",
+                  )}
                 >
                   <div className="flex items-start gap-2.5">
-                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--status-danger)]" />
+                    <AlertTriangle
+                      className="mt-0.5 h-4 w-4 shrink-0 text-[var(--status-danger)]"
+                      aria-hidden="true"
+                    />
                     <div className="flex-1 space-y-2">
                       <p className="font-bold">
                         {pickLang(
@@ -966,7 +1062,13 @@ export const SettingsPage = memo(function SettingsPage({
                           disabled={busyAction !== null}
                           onClick={() => void handleConfirmClearAll()}
                         >
-                          {pickLang(lang, "Konfirmasi Hapus Permanen", "Confirm Permanent Delete")}
+                          {busyAction === "clear"
+                            ? pickLang(lang, "Menghapus...", "Clearing...")
+                            : pickLang(
+                                lang,
+                                "Konfirmasi Hapus Permanen",
+                                "Confirm Permanent Delete",
+                              )}
                         </Button>
                         <Button
                           variant="secondary"

@@ -13,7 +13,9 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { pickLang } from "../../i18n";
+import { useOptionalThemeContext } from "../../theme";
 import type { AppLanguage } from "../../types";
+import { cn } from "../../utils/cn";
 import { Badge } from "../ui/Badge";
 import { Card } from "../ui/Card";
 import { GlossySquircleIcon, type SquircleTone } from "../ui/GlossySquircleIcon";
@@ -180,6 +182,7 @@ export const AdvancedModulesPreview = memo(function AdvancedModulesPreview({
   onOpenWorkbench,
   onOpenShortcut,
 }: AdvancedModulesPreviewProps) {
+  const isAntiSlop = useOptionalThemeContext()?.uiMode === "anti-slop";
   const handleSelectTool = (target: AdvancedShortcutTarget) => {
     if (onOpenShortcut) {
       onOpenShortcut(target);
@@ -220,13 +223,18 @@ export const AdvancedModulesPreview = memo(function AdvancedModulesPreview({
           </Badge>
         </div>
 
-        <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
           {ACTIVE_TOOLS.map((tool) => (
             <button
               key={tool.id}
               type="button"
               onClick={() => handleSelectTool(tool.target)}
-              className="glass-card glass-card-interactive glass-card-emerald group flex cursor-pointer flex-col justify-between rounded-xl p-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+              className={cn(
+                "group flex cursor-pointer flex-col justify-between rounded-xl p-4 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]",
+                isAntiSlop
+                  ? "border border-[var(--border-strong)] bg-[var(--bg-surface-elevated)] hover:border-[var(--color-primary)] hover:bg-[var(--bg-surface)]"
+                  : "glass-card glass-card-interactive glass-card-emerald",
+              )}
             >
               <div>
                 <div className="flex items-start gap-3">
@@ -244,7 +252,12 @@ export const AdvancedModulesPreview = memo(function AdvancedModulesPreview({
 
               <div className="mt-3.5 flex items-center justify-between border-t border-[var(--border-subtle)] pt-2.5 text-xs font-semibold text-[var(--status-success)]">
                 <span>{language === "id" ? tool.actionId : tool.actionEn}</span>
-                <ArrowRight className="h-3.5 w-3.5 transition-transform duration-150 group-hover:translate-x-1 motion-reduce:transform-none" />
+                {!isAntiSlop && (
+                  <ArrowRight
+                    className="h-3.5 w-3.5 transition-transform duration-150 group-hover:translate-x-1 motion-reduce:transform-none"
+                    aria-hidden="true"
+                  />
+                )}
               </div>
             </button>
           ))}
@@ -258,12 +271,12 @@ export const AdvancedModulesPreview = memo(function AdvancedModulesPreview({
             {pickLang(language, "Dalam Pengembangan", "In Development")}
           </h2>
           <Badge tone="neutral">
-            <Clock className="h-3 w-3" />
+            <Clock className="h-3 w-3" aria-hidden="true" />
             <span>{pickLang(language, "Segera Hadir", "Coming Soon")}</span>
           </Badge>
         </div>
 
-        <div className="selectable-panel grid grid-cols-1 gap-3.5 md:grid-cols-3">
+        <div className="selectable-panel grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
           {UPCOMING_TOOLS.map((item) => (
             <Card key={item.id} interactive={false} className="flex flex-col p-4 opacity-75">
               <div className="flex items-start gap-3">

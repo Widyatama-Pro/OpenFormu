@@ -7,6 +7,7 @@ import {
   ChevronUp,
   ChevronsRight,
   Plus,
+  Sprout,
   Sparkles,
   Target,
   Trash2,
@@ -155,7 +156,8 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
   onCollapse,
 }: NutrientTargetsPanelProps) {
   const themeCtx = useOptionalThemeContext();
-  const useGpuFlip = (themeCtx?.motionEngine ?? "gpu_flip") === "gpu_flip";
+  const isAntiSlop = themeCtx?.uiMode === "anti-slop";
+  const useGpuFlip = !isAntiSlop && (themeCtx?.motionEngine ?? "gpu_flip") === "gpu_flip";
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [showDecimalDetail, setShowDecimalDetail] = useState(false);
   const [showCalcBreakdown, setShowCalcBreakdown] = useState(false);
@@ -261,14 +263,22 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
   return (
     <Card
       interactive={false}
-      className="acrylic-panel selectable-panel flex flex-col lg:h-full lg:overflow-hidden"
+      className={cn(
+        "selectable-panel flex flex-col lg:h-full lg:overflow-hidden",
+        !isAntiSlop && "acrylic-panel",
+      )}
     >
-      <div className="space-y-2 border-b border-[var(--glass-border-tint,var(--border-subtle))] px-3.5 py-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
+      <div className="space-y-2 border-b border-[var(--glass-border-tint,var(--border-subtle))] px-3 py-2.5 sm:px-3.5 sm:py-3">
+        <div className="flex flex-wrap items-center justify-between gap-1.5">
+          <div className="flex min-w-0 items-center gap-2">
             <span
               aria-hidden="true"
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border border-[var(--status-success-border)] bg-[var(--status-success-soft)] text-[var(--status-success)] shadow-[0_0_12px_var(--glow-success-pill,transparent)]"
+              className={cn(
+                "inline-flex h-7 w-7 shrink-0 items-center justify-center border border-[var(--status-success-border)] bg-[var(--status-success-soft)] text-[var(--status-success)]",
+                isAntiSlop
+                  ? "rounded-lg"
+                  : "rounded-xl shadow-[0_0_12px_var(--glow-success-pill,transparent)]",
+              )}
             >
               <Target className="h-4 w-4" />
             </span>
@@ -276,7 +286,7 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
               {pickLang(language, "Target Nutrien", "Nutrient Targets")}
             </h2>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+          <div className="flex min-w-0 flex-wrap items-center justify-end gap-1">
             <Button
               variant={showDecimalDetail ? "primary" : "secondary"}
               size="sm"
@@ -293,8 +303,9 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
                 "2-decimal detail (0.00) for nutrient targets and actuals",
               )}
               className={cn(
-                "!min-h-7 rounded-xl px-2 text-[10px] font-bold tabular-nums md:!min-h-7",
-                !showDecimalDetail && "acrylic-control-capsule",
+                "min-h-11 px-2.5 text-[10px] font-bold tabular-nums md:min-h-7 md:px-2",
+                !isAntiSlop && "rounded-xl",
+                !showDecimalDetail && !isAntiSlop && "acrylic-control-capsule",
               )}
             >
               0,00
@@ -311,11 +322,12 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
                   "Toggle dynamic nutrient calculation breakdown",
                 )}
                 className={cn(
-                  "!min-h-7 rounded-xl px-2 text-[10px] md:!min-h-7",
-                  !showCalcBreakdown && "acrylic-control-capsule",
+                  "min-h-11 px-2.5 text-[10px] md:min-h-7 md:px-2",
+                  !isAntiSlop && "rounded-xl",
+                  !showCalcBreakdown && !isAntiSlop && "acrylic-control-capsule",
                 )}
               >
-                <Calculator className="h-3 w-3" />
+                <Calculator className="h-3 w-3" aria-hidden="true" />
                 <span>{pickLang(language, "Rincian Hitung", "Calc Details")}</span>
               </Button>
             )}
@@ -329,9 +341,16 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
                   setCustomError(null);
                 }}
                 aria-label={pickLang(language, "Tambah Nutrien Kustom", "Add Custom Nutrient")}
-                className="acrylic-control-capsule !min-h-7 rounded-xl px-2 text-[10px] md:!min-h-7"
+                className={cn(
+                  "min-h-11 px-2.5 text-[10px] md:min-h-7 md:px-2",
+                  !isAntiSlop && "acrylic-control-capsule rounded-xl",
+                )}
               >
-                {showCustomForm ? <X className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                {showCustomForm ? (
+                  <X className="h-3 w-3" aria-hidden="true" />
+                ) : (
+                  <Plus className="h-3 w-3" aria-hidden="true" />
+                )}
                 <span>
                   {showCustomForm
                     ? pickLang(language, "Tutup", "Close")
@@ -355,16 +374,16 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
                     "Sembunyikan panel target nutrien",
                     "Hide nutrient targets panel",
                   )}
-                  className="min-h-7 w-7 p-0"
+                  className="min-h-11 w-11 p-0 lg:min-h-7 lg:w-7"
                 >
-                  <ChevronsRight className="h-4 w-4" />
+                  <ChevronsRight className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </span>
             )}
           </div>
         </div>
 
-        {/* Baris 2: Toggle Mode Rentang vs Pendekatan 1 Angka (120 FPS Pill) + Badge Basis */}
+        {/* Baris 2: Toggle Mode Rentang vs Pendekatan 1 Angka + Badge Basis */}
         <div className="flex items-center justify-between gap-2">
           {onChangeTargetInputMode ? (
             <div
@@ -374,7 +393,12 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
                 "Pilih mode target Rentang atau Pendekatan 1 Angka",
                 "Switch between Range or Single Target approach",
               )}
-              className="inline-flex h-7 items-center rounded-xl border border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--bg-sunken)]/70 p-0.5"
+              className={cn(
+                "inline-flex min-h-11 items-center p-0.5 md:h-7 md:min-h-7",
+                isAntiSlop
+                  ? "rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-sunken)]"
+                  : "rounded-xl border border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--bg-sunken)]/70",
+              )}
             >
               <button
                 type="button"
@@ -386,9 +410,12 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
                   "Range mode: set Min and Max nutrient bounds",
                 )}
                 className={cn(
-                  "elastic-size-box relative cursor-pointer rounded-lg px-2.5 py-0.5 text-[10px] font-bold transition-[transform,color] duration-150 active:scale-[0.97] motion-reduce:transform-none",
+                  "relative min-h-11 cursor-pointer rounded-md px-3 py-1 text-[10px] font-bold transition-[transform,color] duration-150 md:min-h-6 md:px-2.5 md:py-0.5 motion-reduce:transform-none",
+                  !isAntiSlop && "elastic-size-box rounded-lg active:scale-[0.97]",
                   !singleMode
-                    ? "text-[var(--status-success)]"
+                    ? isAntiSlop
+                      ? "text-[var(--text-primary)]"
+                      : "text-[var(--status-success)]"
                     : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                 )}
               >
@@ -403,7 +430,12 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
                   ) : (
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 rounded-lg bg-[var(--bg-surface-elevated)] shadow-[var(--shadow-neu-flat)]"
+                      className={cn(
+                        "pointer-events-none absolute inset-0",
+                        isAntiSlop
+                          ? "rounded-md border border-[var(--color-primary)] bg-[var(--bg-surface-elevated)]"
+                          : "rounded-lg bg-[var(--bg-surface-elevated)] shadow-[var(--shadow-neu-flat)]",
+                      )}
                     />
                   ))}
                 <span className="relative z-10">{pickLang(language, "Rentang", "Range")}</span>
@@ -418,7 +450,8 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
                   "Single-Number Approach: get as close as possible to each single standard (CF stays at or below max)",
                 )}
                 className={cn(
-                  "elastic-size-box relative cursor-pointer rounded-lg px-2.5 py-0.5 text-[10px] font-bold transition-[transform,color] duration-150 active:scale-[0.97] motion-reduce:transform-none",
+                  "relative min-h-11 cursor-pointer rounded-md px-3 py-1 text-[10px] font-bold transition-[transform,color] duration-150 md:min-h-6 md:px-2.5 md:py-0.5 motion-reduce:transform-none",
+                  !isAntiSlop && "elastic-size-box rounded-lg active:scale-[0.97]",
                   singleMode
                     ? "text-[var(--text-on-primary)]"
                     : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
@@ -435,7 +468,10 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
                   ) : (
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-0 rounded-lg bg-[var(--color-primary)] shadow-[var(--shadow-neu-flat)]"
+                      className={cn(
+                        "pointer-events-none absolute inset-0 bg-[var(--color-primary)]",
+                        isAntiSlop ? "rounded-md" : "rounded-lg shadow-[var(--shadow-neu-flat)]",
+                      )}
                     />
                   ))}
                 <span className="relative z-10">{pickLang(language, "1 Angka", "1 Target")}</span>
@@ -492,7 +528,10 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
               {requirement.dynamicCalculation.steps.map((step) => (
                 <div
                   key={step.nutrientId}
-                  className="rounded-lg bg-[var(--bg-sunken)]/60 px-2 py-1.5 text-[10px]"
+                  className={cn(
+                    "rounded-lg px-2 py-1.5 text-[10px]",
+                    isAntiSlop ? "bg-[var(--bg-sunken)]" : "bg-[var(--bg-sunken)]/60",
+                  )}
                 >
                   <div className="flex items-center justify-between gap-2 font-bold text-[var(--text-primary)]">
                     <span>{language === "id" ? step.labelId : step.labelEn}</span>
@@ -697,28 +736,29 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
                   : meter.tone === "exact"
                     ? "bg-[var(--status-success)]"
                     : "bg-[var(--text-muted)]";
+            const hintSep = isAntiSlop ? ": " : " — ";
             const meterHint =
               meter.tone === "exact"
                 ? pickLang(
                     language,
-                    `${Math.round(trackPct)}% — Tepat target`,
-                    `${Math.round(trackPct)}% — Exact target`,
+                    `${Math.round(trackPct)}%${hintSep}Tepat target`,
+                    `${Math.round(trackPct)}%${hintSep}Exact target`,
                   )
                 : meter.tone === "over"
                   ? pickLang(
                       language,
-                      `${Math.round(trackPct)}% — Melebihi target`,
-                      `${Math.round(trackPct)}% — Over target`,
+                      `${Math.round(trackPct)}%${hintSep}Melebihi target`,
+                      `${Math.round(trackPct)}%${hintSep}Over target`,
                     )
                   : meter.tone === "alert"
                     ? pickLang(
                         language,
                         meter.isOver
-                          ? `${Math.round(trackPct)}% — Melebihi batas maksimal`
-                          : `${Math.round(trackPct)}% — Di bawah target`,
+                          ? `${Math.round(trackPct)}%${hintSep}Melebihi batas maksimal`
+                          : `${Math.round(trackPct)}%${hintSep}Di bawah target`,
                         meter.isOver
-                          ? `${Math.round(trackPct)}% — Above max limit`
-                          : `${Math.round(trackPct)}% — Below target`,
+                          ? `${Math.round(trackPct)}%${hintSep}Above max limit`
+                          : `${Math.round(trackPct)}%${hintSep}Below target`,
                       )
                     : pickLang(language, "Tanpa batas target", "No target bound");
 
@@ -729,21 +769,26 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
                   "rounded-xl border transition-[border-color,box-shadow,background-color] duration-150",
                   isAlert || invalidRange
                     ? "border-[var(--status-danger-border)] bg-[var(--status-danger-soft)]"
-                    : "acrylic-subcard",
+                    : isAntiSlop
+                      ? "border-[var(--border-subtle)] bg-[var(--bg-surface)]"
+                      : "acrylic-subcard",
                   !enabled && "opacity-55",
                 )}
               >
-                {/* Baris Ringkas Default dengan Visual Progress Track & Kapsul Aktual */}
                 <div className="flex items-center justify-between gap-1.5 px-2.5 py-2">
                   <div className="flex min-w-0 flex-1 items-center gap-1.5">
                     {(isAdvanceRow || isCustomRow) && (
-                      <input
-                        type="checkbox"
-                        checked={enabled}
-                        aria-label={`${pickLang(language, "Kontrol", "Toggle")} ${fullName}`}
-                        onChange={(e) => onUpdateConstraint(nut.id, { enabled: e.target.checked })}
-                        className="h-3.5 w-3.5 shrink-0 cursor-pointer rounded border-[var(--border-subtle)] accent-[var(--color-primary)]"
-                      />
+                      <label className="inline-flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center md:min-h-0 md:min-w-0">
+                        <input
+                          type="checkbox"
+                          checked={enabled}
+                          aria-label={`${pickLang(language, "Kontrol", "Toggle")} ${fullName}`}
+                          onChange={(e) =>
+                            onUpdateConstraint(nut.id, { enabled: e.target.checked })
+                          }
+                          className="h-3.5 w-3.5 shrink-0 cursor-pointer rounded border-[var(--border-subtle)] accent-[var(--color-primary)]"
+                        />
+                      </label>
                     )}
                     <button
                       type="button"
@@ -802,18 +847,23 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
                           data-track-pct={String(Math.round(trackPct))}
                           data-track-tone={meter.tone}
                           title={meterHint}
-                          className="relative mt-1.5 h-1.5 w-full max-w-[110px] rounded-full bg-[var(--bg-sunken)]/85"
+                          className={cn(
+                            "relative mt-1.5 h-1.5 w-full max-w-[110px] rounded-full",
+                            isAntiSlop ? "bg-[var(--bg-sunken)]" : "bg-[var(--bg-sunken)]/85",
+                          )}
                         >
                           <div
                             className={cn(
-                              "nutrient-bar-glow h-full origin-left rounded-full transition-[transform,background-color] duration-220 motion-reduce:transition-none",
+                              "h-full origin-left rounded-full transition-[transform,background-color] duration-220 motion-reduce:transition-none",
+                              !isAntiSlop && "nutrient-bar-glow",
                               trackColorClass,
                             )}
                             style={{ transform: `scaleX(${trackPct / 100})` }}
                           />
                           <span
                             className={cn(
-                              "absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/80 shadow-xs transition-[left,background-color] duration-220",
+                              "absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/80 transition-[left,background-color] duration-220",
+                              !isAntiSlop && "shadow-xs",
                               thumbColorClass,
                             )}
                             style={{ left: `clamp(5px, ${trackPct}%, calc(100% - 5px))` }}
@@ -822,18 +872,31 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
                       </div>
 
                       <div className="flex shrink-0 items-center gap-1">
-                        <div className="acrylic-value-pill rounded-xl px-2 py-0.5 text-right">
+                        <div
+                          className={cn(
+                            "px-2 py-0.5 text-right",
+                            isAntiSlop
+                              ? "rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface-elevated)]"
+                              : "acrylic-value-pill rounded-xl",
+                          )}
+                        >
                           <span className="block text-[8px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                             {pickLang(language, "Aktual", "Actual")}
                           </span>
                           <span className="text-xs font-bold tabular-nums text-[var(--text-primary)]">
-                            {res ? formatNumberLocale(res.value, digits) : "—"}
+                            {res ? formatNumberLocale(res.value, digits) : isAntiSlop ? "-" : "—"}
                           </span>
                         </div>
                         {isExpanded ? (
-                          <ChevronUp className="h-3.5 w-3.5 text-[var(--text-secondary)]" />
+                          <ChevronUp
+                            className="h-3.5 w-3.5 text-[var(--text-secondary)]"
+                            aria-hidden="true"
+                          />
                         ) : (
-                          <ChevronDown className="h-3.5 w-3.5 text-[var(--text-secondary)]" />
+                          <ChevronDown
+                            className="h-3.5 w-3.5 text-[var(--text-secondary)]"
+                            aria-hidden="true"
+                          />
                         )}
                       </div>
                     </button>
@@ -853,7 +916,7 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
                                   : "as_fed",
                               )
                             }
-                            className="cursor-pointer rounded bg-[var(--status-info-soft)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--status-info)] transition-colors hover:brightness-95"
+                            className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded bg-[var(--status-info-soft)] px-2 text-[10px] font-bold text-[var(--status-info)] transition-colors hover:brightness-95 md:min-h-0 md:min-w-0 md:px-1.5 md:py-0.5"
                             title={pickLang(
                               language,
                               "Klik untuk ubah basis nutrien kustom",
@@ -870,9 +933,9 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
                             type="button"
                             onClick={() => onRemoveCustomNutrient(nut.id)}
                             aria-label={`${pickLang(language, "Hapus", "Remove")} ${fullName}`}
-                            className="cursor-pointer rounded p-0.5 text-[var(--status-danger)] hover:bg-[var(--status-danger-soft)]"
+                            className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded p-1 text-[var(--status-danger)] hover:bg-[var(--status-danger-soft)] md:min-h-7 md:min-w-7 md:p-0.5"
                           >
-                            <Trash2 className="h-3 w-3" />
+                            <Trash2 className="h-3.5 w-3.5 md:h-3 md:w-3" aria-hidden="true" />
                           </button>
                         )}
                       </>
@@ -886,7 +949,6 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
                   </div>
                 </div>
 
-                {/* Area Edit Target: 1 Angka vs Rentang Min–Max */}
                 {isExpanded && (
                   <div className="border-t border-[var(--border-subtle)] px-2 pt-1.5 pb-2">
                     {singleMode ? (
@@ -896,13 +958,21 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
                             {isUpperOnly
                               ? pickLang(
                                   language,
-                                  `Batas Maksimal (${nut.unit}) — tidak boleh lebih`,
-                                  `Maximum Limit (${nut.unit}) — must not exceed`,
+                                  isAntiSlop
+                                    ? `Batas Maksimal (${nut.unit}): tidak boleh lebih`
+                                    : `Batas Maksimal (${nut.unit}) — tidak boleh lebih`,
+                                  isAntiSlop
+                                    ? `Maximum Limit (${nut.unit}): must not exceed`
+                                    : `Maximum Limit (${nut.unit}) — must not exceed`,
                                 )
                               : pickLang(
                                   language,
-                                  `Target Standar (${nut.unit}) — pendekatan presisi`,
-                                  `Target Standard (${nut.unit}) — close approach`,
+                                  isAntiSlop
+                                    ? `Target Standar (${nut.unit}): pendekatan presisi`
+                                    : `Target Standar (${nut.unit}) — pendekatan presisi`,
+                                  isAntiSlop
+                                    ? `Target Standard (${nut.unit}): close approach`
+                                    : `Target Standard (${nut.unit}) — close approach`,
                                 )}
                           </span>
                         </div>
@@ -992,7 +1062,7 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
                             `Tolerance priority: ${getTierLabel(language, activeTier)} (click to cycle)`,
                           )}
                           className={cn(
-                            "cursor-pointer rounded px-1.5 py-0.5 text-[10px] font-bold transition-colors",
+                            "min-h-11 cursor-pointer rounded px-2.5 text-[10px] font-bold transition-colors md:min-h-0 md:px-1.5 md:py-0.5",
                             activeTier === "tier0"
                               ? "bg-[var(--status-danger-soft)] text-[var(--status-danger)]"
                               : activeTier === "tier1"
@@ -1032,10 +1102,10 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
                                   { value: "0.95", label: "95%" },
                                   { value: "0.99", label: "99%" },
                                 ]}
-                                className="h-6 min-h-6 px-1.5 py-0 text-[10px] md:min-h-6"
+                                className="min-h-11 px-1.5 py-0 text-[10px] md:h-6 md:min-h-6"
                               />
                             </div>
-                            <label className="inline-flex cursor-pointer items-center gap-1 text-[var(--text-secondary)]">
+                            <label className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 px-1 text-[var(--text-secondary)] md:min-h-0 md:gap-1 md:px-0">
                               <input
                                 type="checkbox"
                                 checked={c?.useCantelli === true}
@@ -1061,7 +1131,6 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
           })}
         </div>
 
-        {/* Saran Bahan Prioritas Mudah Didapat di Indonesia (opsional: Ya / Tidak) */}
         {suggestions.length > 0 && onActivateSuggestedIngredient && (
           <section
             aria-label={pickLang(
@@ -1072,7 +1141,17 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
             className="mt-3 rounded-xl border border-[var(--status-info-border)] bg-[var(--status-info-soft)] p-2.5"
           >
             <div className="mb-2 flex items-start gap-2">
-              <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--status-info)]" />
+              {isAntiSlop ? (
+                <Sprout
+                  className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--status-info)]"
+                  aria-hidden="true"
+                />
+              ) : (
+                <Sparkles
+                  className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--status-info)]"
+                  aria-hidden="true"
+                />
+              )}
               <div className="min-w-0">
                 <h3 className="text-[11px] font-bold text-[var(--text-primary)]">
                   {pickLang(
@@ -1084,8 +1163,12 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
                 <p className="text-[10px] leading-snug text-[var(--text-secondary)]">
                   {pickLang(
                     language,
-                    "Prioritas bahan yang mudah didapat di Indonesia. Hanya saran — pilih apakah ingin dimasukkan.",
-                    "Prioritizing widely available Indonesian feeds. Optional suggestion — choose Yes or No.",
+                    isAntiSlop
+                      ? "Prioritas bahan yang mudah didapat di Indonesia. Hanya saran, pilih apakah ingin dimasukkan."
+                      : "Prioritas bahan yang mudah didapat di Indonesia. Hanya saran — pilih apakah ingin dimasukkan.",
+                    isAntiSlop
+                      ? "Prioritizing widely available Indonesian feeds. Optional suggestion, choose Yes or No."
+                      : "Prioritizing widely available Indonesian feeds. Optional suggestion — choose Yes or No.",
                   )}
                 </p>
               </div>
@@ -1119,7 +1202,12 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
                           </Badge>
                         </div>
                         <p className="mt-0.5 text-[10px] leading-snug text-[var(--text-secondary)]">
-                          {language === "id" ? sug.reasonId : sug.reasonEn}
+                          {(() => {
+                            const rawReason = language === "id" ? sug.reasonId : sug.reasonEn;
+                            return isAntiSlop
+                              ? rawReason.replace(/\s*\u2014\s*/g, ", ")
+                              : rawReason;
+                          })()}
                         </p>
                       </div>
                     </div>
@@ -1140,7 +1228,7 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
                           `Tolak saran ${ingName}`,
                           `Dismiss ${ingName}`,
                         )}
-                        className="min-h-7 px-2 text-[10px] md:min-h-7"
+                        className="min-h-11 min-w-11 px-3 text-[10px] md:min-h-7 md:min-w-0 md:px-2"
                       >
                         {pickLang(language, "Tidak", "No")}
                       </Button>
@@ -1153,9 +1241,9 @@ export const NutrientTargetsPanel = memo(function NutrientTargetsPanel({
                           `Masukkan saran ${ingName}`,
                           `Include ${ingName}`,
                         )}
-                        className="min-h-7 px-2.5 text-[10px] md:min-h-7"
+                        className="min-h-11 px-3 text-[10px] md:min-h-7 md:px-2.5"
                       >
-                        <Check className="h-3 w-3" />
+                        <Check className="h-3 w-3" aria-hidden="true" />
                         <span>{pickLang(language, "Ya, Masukkan", "Yes, Include")}</span>
                       </Button>
                     </div>

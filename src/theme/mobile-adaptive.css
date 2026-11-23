@@ -1,7 +1,5 @@
-/* ============================================================================
- * Portable Multi-Theme Design System — Android / Capacitor / PWA Mobile Adaptive CSS
- * Calibrated for OLED / AMOLED displays, notch safe-areas, and 44px touch targets.
- * ========================================================================== */
+/* Portable Multi-Theme Design System: Android / Capacitor / PWA mobile adaptive styles. */
+/* Calibrated for OLED / AMOLED displays, notch safe-areas, and 44px touch targets. */
 
 :root {
   --touch-target-min: 44px;
@@ -67,7 +65,7 @@
 }
 
 /* Enforce WCAG / Material Touch Target Minimums on Coarse Pointers */
-@media (pointer: coarse), (max-width: 768px) {
+@media (pointer: coarse), (max-width: 767px) {
   .neu-button,
   .theme-touch-target,
   button[data-theme-control]:not([role="switch"]),
@@ -87,7 +85,7 @@
 }
 
 /* OLED / AMOLED Anti-Banding Soft-UI Shadow Calibration (Android WebView / Chrome) */
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   [data-mode="dark"] {
     /* Slightly tighter blur radii prevent 8-bit OLED banding on large mobile surfaces */
     --shadow-neu-flat:
@@ -191,5 +189,10 @@
 
   .landscape-dialog-foot {
     padding: 0.5rem 1rem;
+  }
+
+  [data-ui-mode="anti-slop"] .landscape-bottom-nav-btn,
+  [data-ui-mode="anti-slop"] .landscape-sticky-cta {
+    min-height: var(--touch-target-min) !important;
   }
 }
