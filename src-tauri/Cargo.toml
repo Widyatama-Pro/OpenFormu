@@ -1,6 +1,6 @@
 [package]
 name = "openformu"
-version = "0.9.0"
+version = "0.9.1"
 description = "OpenFormu — Formulasi Pakan Ternak Presisi"
 authors = ["Reza Widya Utama"]
 license = "MIT"

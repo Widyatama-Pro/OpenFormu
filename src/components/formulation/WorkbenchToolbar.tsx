@@ -456,34 +456,32 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
 
       <div className="relative z-10 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
         <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 lg:contents">
-          <div className="flex min-w-0 flex-1 items-center gap-2.5 lg:order-1 lg:flex-none lg:shrink-0">
+          <div className="flex shrink-0 items-center gap-2 lg:order-1">
             {!isAntiSlop && (
               <span
                 aria-hidden="true"
                 className="h-6 w-1.5 shrink-0 rounded-full bg-gradient-to-b from-[var(--status-success)] via-[var(--color-accent)] to-[var(--color-primary)] shadow-[0_0_12px_var(--glow-primary-soft,rgba(16,185,129,0.4))] lg:h-7"
               />
             )}
-            <div className="min-w-0">
-              <h1 className="truncate text-[14px] font-extrabold tracking-tight text-[var(--text-primary)] sm:text-base lg:text-[20px] lg:leading-tight">
-                <span aria-hidden="true" className="sm:hidden">
-                  <AnimatedTextSwap text={pickLang(language, "Formulasi", "Ration")} />
-                </span>
-                <span className="sr-only sm:not-sr-only">
-                  <AnimatedTextSwap
-                    text={pickLang(language, "Formulasi Ransum", "Ration Formulation")}
-                  />
-                </span>
-              </h1>
-            </div>
+            <h1 className="whitespace-nowrap text-[14px] font-extrabold tracking-tight text-[var(--text-primary)] sm:text-base lg:text-[20px] lg:leading-tight">
+              <span aria-hidden="true" className="sm:hidden">
+                <AnimatedTextSwap text={pickLang(language, "Formulasi", "Ration")} />
+              </span>
+              <span className="sr-only sm:not-sr-only">
+                <AnimatedTextSwap
+                  text={pickLang(language, "Formulasi Ransum", "Ration Formulation")}
+                />
+              </span>
+            </h1>
           </div>
 
-          <div className="flex shrink-0 items-center gap-1.5 lg:order-3 lg:ml-auto">
+          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 lg:order-3 lg:ml-auto lg:flex-nowrap">
             <Button
               variant="secondary"
               size="sm"
               onClick={onOpenExportDialog}
               className={cn(
-                "min-h-11 gap-1.5 px-2.5 text-[11px] lg:min-h-8 lg:px-3",
+                "min-h-11 gap-1 px-2 text-[11px] sm:gap-1.5 sm:px-2.5 lg:min-h-8 lg:px-3",
                 !isAntiSlop && "acrylic-control-capsule rounded-xl",
               )}
             >
@@ -498,7 +496,7 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
               size="sm"
               onClick={onOpenSaveDialog}
               className={cn(
-                "min-h-11 gap-1.5 px-2.5 text-[11px] lg:min-h-8 lg:px-3",
+                "min-h-11 gap-1 px-2 text-[11px] sm:gap-1.5 sm:px-2.5 lg:min-h-8 lg:px-3",
                 !isAntiSlop && "acrylic-control-capsule rounded-xl",
               )}
             >
