@@ -55,15 +55,16 @@ export function estimateDailyConsumption(
   const src = `${requirement?.name ?? ""} ${requirement?.phase ?? ""} ${requirement?.source ?? ""}`;
 
   // 1. Cek Bobot Badan (BB) bila tertera pada profil
-  const bwMatch = src.match(/(?:BB|BW|Live\s*Wt|Weight)\s*[:=]?\s*(\d{2,4})\s*kg/i) ??
+  const bwMatch =
+    src.match(/(?:BB|BW|Live\s*Wt|Weight)\s*[:=]?\s*(\d{2,4})\s*kg/i) ??
     src.match(/\b(150|200|250|300|350|400|450|500|550|600|650|700|800)\s*kg\b/i);
   const bodyWeightKg = bwMatch ? Number(bwMatch[1]) : null;
 
   // 2. Cek DMI eksplisit dari dynamicCalculation atau teks source Kearl/NRC
   let dmiKgPerHead: number | null =
     requirement?.dynamicCalculation?.dmiKg !== undefined &&
-      Number.isFinite(requirement.dynamicCalculation.dmiKg) &&
-      requirement.dynamicCalculation.dmiKg > 0
+    Number.isFinite(requirement.dynamicCalculation.dmiKg) &&
+    requirement.dynamicCalculation.dmiKg > 0
       ? requirement.dynamicCalculation.dmiKg
       : null;
 
@@ -130,8 +131,7 @@ export function estimateDailyConsumption(
   }
 
   const asFedKgPerHead = dmiKgPerHead / (safeDmPct / 100);
-  const dmiPctBw =
-    bodyWeightKg && bodyWeightKg > 0 ? (dmiKgPerHead / bodyWeightKg) * 100 : null;
+  const dmiPctBw = bodyWeightKg && bodyWeightKg > 0 ? (dmiKgPerHead / bodyWeightKg) * 100 : null;
   const asFedPctBw =
     bodyWeightKg && bodyWeightKg > 0 ? (asFedKgPerHead / bodyWeightKg) * 100 : null;
 
@@ -224,8 +224,7 @@ export const BatchMixerCalculator = memo(function BatchMixerCalculator({
     costPerKg !== null && costPerKg !== undefined
       ? (activeBasis === "dry_matter" ? effectiveDmiKg : effectiveAsFedKg) * costPerKg
       : null;
-  const batchCoverageHeadDays =
-    effectiveAsFedKg > 0 ? batchSizeKg / effectiveAsFedKg : 0;
+  const batchCoverageHeadDays = effectiveAsFedKg > 0 ? batchSizeKg / effectiveAsFedKg : 0;
 
   return (
     <div className="space-y-3">
@@ -294,7 +293,11 @@ export const BatchMixerCalculator = memo(function BatchMixerCalculator({
               [
                 {
                   id: "dual",
-                  label: pickLang(language, "2 Versi (xx,xxx & Bulat)", "2 Versions (xx.xxx & Rounded)"),
+                  label: pickLang(
+                    language,
+                    "2 Versi (xx,xxx & Bulat)",
+                    "2 Versions (xx.xxx & Rounded)",
+                  ),
                 },
                 {
                   id: "exact_3dec",
@@ -393,16 +396,20 @@ export const BatchMixerCalculator = memo(function BatchMixerCalculator({
               <span className="block text-[10px] tabular-nums text-[var(--text-muted)]">
                 {defaultIntake.dmiPctBw !== null
                   ? `${pickLang(language, "Relatif:", "Relative:")} ${formatNumberLocale(
-                    (effectiveDmiKg / (defaultIntake.bodyWeightKg ?? 1)) * 100,
-                    2,
-                  )}% BB (${defaultIntake.bodyWeightKg} kg)`
+                      (effectiveDmiKg / (defaultIntake.bodyWeightKg ?? 1)) * 100,
+                      2,
+                    )}% BB (${defaultIntake.bodyWeightKg} kg)`
                   : `${formatNumberLocale(effectiveDmiKg * 1000, 1)} g BK/ekor/hr`}
               </span>
             </div>
 
             <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-sunken)] p-2">
               <span className="block text-[10px] font-semibold text-[var(--text-secondary)]">
-                {pickLang(language, "Konsumsi Segar (As-Fed) / Hari", "Daily Fresh (As-Fed) Intake")}
+                {pickLang(
+                  language,
+                  "Konsumsi Segar (As-Fed) / Hari",
+                  "Daily Fresh (As-Fed) Intake",
+                )}
               </span>
               <span className="mt-0.5 block text-sm font-bold tabular-nums text-[var(--text-primary)]">
                 {formatNumberLocale(effectiveAsFedKg, 3)} kg/hr
@@ -410,9 +417,9 @@ export const BatchMixerCalculator = memo(function BatchMixerCalculator({
               <span className="block text-[10px] tabular-nums text-[var(--text-muted)]">
                 {defaultIntake.asFedPctBw !== null
                   ? `${pickLang(language, "Relatif:", "Relative:")} ${formatNumberLocale(
-                    (effectiveAsFedKg / (defaultIntake.bodyWeightKg ?? 1)) * 100,
-                    2,
-                  )}% BB Segar`
+                      (effectiveAsFedKg / (defaultIntake.bodyWeightKg ?? 1)) * 100,
+                      2,
+                    )}% BB Segar`
                   : `${formatNumberLocale(effectiveAsFedKg * 1000, 1)} g As-Fed/ekor/hr`}
               </span>
             </div>
@@ -451,10 +458,10 @@ export const BatchMixerCalculator = memo(function BatchMixerCalculator({
               <span className="block text-[10px] tabular-nums text-[var(--text-muted)]">
                 {headCount > 0
                   ? `~${formatNumberLocale(batchCoverageHeadDays / headCount, 1)} ${pickLang(
-                    language,
-                    `hari utk ${headCount} ekor`,
-                    `days for ${headCount} head`,
-                  )}`
+                      language,
+                      `hari utk ${headCount} ekor`,
+                      `days for ${headCount} head`,
+                    )}`
                   : "-"}
               </span>
             </div>
@@ -507,7 +514,11 @@ export const BatchMixerCalculator = memo(function BatchMixerCalculator({
                     fractionDigits={0}
                     fallbackOnEmpty={10}
                     commitOnChange
-                    ariaLabel={pickLang(language, "Jumlah populasi ternak ekor", "Livestock head count")}
+                    ariaLabel={pickLang(
+                      language,
+                      "Jumlah populasi ternak ekor",
+                      "Livestock head count",
+                    )}
                     onCommit={(val) => setHeadCount(Math.max(1, Math.round(val ?? 10)))}
                   />
                 </div>
@@ -657,7 +668,8 @@ export const BatchMixerCalculator = memo(function BatchMixerCalculator({
                         {formatNumberLocale(pct, pctDigits)}%
                         {precisionMode === "dual" && (
                           <span className="ml-1 text-[10px] font-normal text-[var(--text-muted)]">
-                            ({formatNumberLocale(
+                            (
+                            {formatNumberLocale(
                               pct,
                               resolveDisplayDigits("%", "inclusion", decimalPlaces, pct),
                             )}
