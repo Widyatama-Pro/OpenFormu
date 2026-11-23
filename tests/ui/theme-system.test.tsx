@@ -89,6 +89,9 @@ function ThemeChartProbe() {
       <button type="button" onClick={() => setPaletteId("template-03")}>
         Switch Slate
       </button>
+      <button type="button" onClick={() => setModeSetting("light")}>
+        Switch Light
+      </button>
       <button type="button" onClick={() => setModeSetting("dark")}>
         Switch Dark
       </button>
@@ -375,9 +378,11 @@ describe("OpenFormu Multi-Theme Design System (10 Variants, PWA, Android & PDF)"
     const getSignature = () =>
       document.querySelector("[data-theme-chart]")?.getAttribute("data-theme-chart");
 
-    // Palet lama yg sudah dihapus ("prd-custom") jatuh aman ke "original-default"
-    expect(getSignature()).toBe("original-default-light-std");
+    // Palet lama yg sudah dihapus ("prd-custom") jatuh aman ke default PC ("template-04" & "dark")
+    expect(getSignature()).toBe("template-04-dark-std");
     await user.click(screen.getByRole("button", { name: "Switch Slate" }));
+    expect(getSignature()).toBe("template-03-dark-std");
+    await user.click(screen.getByRole("button", { name: "Switch Light" }));
     expect(getSignature()).toBe("template-03-light-std");
     await user.click(screen.getByRole("button", { name: "Switch Dark" }));
     expect(getSignature()).toBe("template-03-dark-std");

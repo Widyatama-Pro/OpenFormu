@@ -8,22 +8,11 @@ import {
   type KeyboardEvent,
   type WheelEvent,
 } from "react";
-import {
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Columns3,
-  FileSpreadsheet,
-  FileText,
-  Plus,
-  Search,
-  X,
-} from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Columns3, Plus, Search, X } from "lucide-react";
 import { motion } from "motion/react";
 import { FEED_CLASSES, getFeedClassLabel, resolveFeedClass } from "../../data/feed-classes";
 import { MOCK_NUTRIENTS } from "../../data/mock-state";
 import { getNutrientDisplayName, getNutrientFullName, pickLang } from "../../i18n";
-import { generateIngredientDatabasePdf, generateIngredientDatabaseXlsx } from "../../storage";
 import { useOptionalThemeContext } from "../../theme";
 import type {
   AppLanguage,
@@ -34,7 +23,6 @@ import type {
   TableViewTier,
 } from "../../types";
 import { cn } from "../../utils/cn";
-import { downloadBinaryFile } from "../../utils/download";
 import { isDerivedNutrient, resolveNutrientValue } from "../../utils/equations";
 import {
   formatCurrencyIdr,
@@ -105,10 +93,6 @@ export const IngredientLibraryPage = memo(function IngredientLibraryPage({
   const [collapsedClasses, setCollapsedClasses] = useState<ReadonlySet<FeedClassCode>>(
     () => new Set(),
   );
-  const [exportNotice, setExportNotice] = useState<{
-    tone: "success" | "error";
-    text: string;
-  } | null>(null);
   const [localTier, setLocalTier] = useState<TableViewTier>(tableViewTier ?? "basic");
   const activeTier: TableViewTier = tableViewTier ?? localTier;
   const [colOverrides, setColOverrides] = useState<Readonly<Record<string, boolean>>>({});
@@ -395,78 +379,6 @@ export const IngredientLibraryPage = memo(function IngredientLibraryPage({
     [allTabKeys],
   );
 
-  const handleExportPdf = () => {
-    try {
-      const bytes = generateIngredientDatabasePdf({
-        ingredients: filtered,
-        title:
-          classFilter === "all"
-            ? "DATABASE BAHAN PAKAN (8 KLASIFIKASI STANDAR)"
-            : `DATABASE BAHAN PAKAN - ${getFeedClassLabel("id", classFilter).toUpperCase()}`,
-        decimalPlaces,
-      });
-      const filename =
-        classFilter === "all"
-          ? "openformu-database-pakan.pdf"
-          : `openformu-kelas-${classFilter}.pdf`;
-      downloadBinaryFile(bytes, filename, "application/pdf");
-      setExportNotice({
-        tone: "success",
-        text: pickLang(
-          language,
-          `Dokumen PDF "${filename}" (${filtered.length} bahan) berhasil diunduh.`,
-          `PDF "${filename}" (${filtered.length} feeds) downloaded.`,
-        ),
-      });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setExportNotice({
-        tone: "error",
-        text: pickLang(language, `Gagal mengekspor PDF: ${msg}`, `Failed to export PDF: ${msg}`),
-      });
-    }
-  };
-
-  const handleExportXlsx = () => {
-    try {
-      const bytes = generateIngredientDatabaseXlsx({
-        ingredients: filtered,
-        nutrientsCatalog,
-        title:
-          classFilter === "all"
-            ? "OpenFormu — Database Bahan Pakan Lengkap (8 Kelas IFN, 25 Nutrien)"
-            : `OpenFormu — Database Bahan Pakan ${getFeedClassLabel("id", classFilter)}`,
-      });
-      const filename =
-        classFilter === "all"
-          ? "openformu-database-pakan-lengkap.xlsx"
-          : `openformu-kelas-${classFilter}-lengkap.xlsx`;
-      downloadBinaryFile(
-        bytes,
-        filename,
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      );
-      setExportNotice({
-        tone: "success",
-        text: pickLang(
-          language,
-          `Workbook Excel "${filename}" (${filtered.length} bahan, 25 kolom nutrien) berhasil diunduh.`,
-          `Excel workbook "${filename}" (${filtered.length} feeds, 25 nutrient columns) downloaded.`,
-        ),
-      });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setExportNotice({
-        tone: "error",
-        text: pickLang(
-          language,
-          `Gagal mengekspor Excel: ${msg}`,
-          `Failed to export Excel: ${msg}`,
-        ),
-      });
-    }
-  };
-
   return (
     <div className="mx-auto max-w-6xl space-y-4 p-4 sm:p-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -484,41 +396,12 @@ export const IngredientLibraryPage = memo(function IngredientLibraryPage({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" size="sm" onClick={handleExportXlsx}>
-            <FileSpreadsheet className="h-3.5 w-3.5 text-[var(--accent)]" />
-            <span>{pickLang(language, "Ekspor Excel (.xlsx)", "Export Excel (.xlsx)")}</span>
-          </Button>
-          <Button variant="secondary" size="sm" onClick={handleExportPdf}>
-            <FileText className="h-3.5 w-3.5 text-[var(--status-success)]" />
-            <span>{pickLang(language, "Ekspor PDF", "Export PDF")}</span>
-          </Button>
           <Button variant="primary" size="sm" onClick={onOpenAdd}>
             <Plus className="h-3.5 w-3.5" />
             <span>{pickLang(language, "Tambah Bahan", "Add Feed")}</span>
           </Button>
         </div>
       </div>
-
-      {exportNotice && (
-        <div
-          role={exportNotice.tone === "error" ? "alert" : "status"}
-          className={cn(
-            "flex items-center justify-between gap-2 rounded-xl border px-3.5 py-2 text-xs font-medium",
-            exportNotice.tone === "error"
-              ? "border-[var(--status-danger-border)] bg-[var(--status-danger-soft)] text-[var(--status-danger)]"
-              : "border-[var(--status-success-border)] bg-[var(--status-success-soft)] text-[var(--status-success)]",
-          )}
-        >
-          <span>{exportNotice.text}</span>
-          <button
-            type="button"
-            onClick={() => setExportNotice(null)}
-            className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center px-2 text-[11px] font-bold underline md:min-h-0 md:min-w-0"
-          >
-            {pickLang(language, "Tutup", "Close")}
-          </button>
-        </div>
-      )}
 
       {/* Pencarian, Baris Tab 8 Kelas yang Bisa Digulir, & Kontrol Tampilan Kolom (Dasar/Standar/Lanjutan) */}
       <div className="space-y-2.5">

@@ -144,10 +144,11 @@ describe("Revisi 6 — OpenFormu Branding, Dynamic 2-Decimal Target Details, Sim
 
     const group = screen.getByRole("group", { name: "Pilihan palet warna" });
     group.focus();
+    expect(document.documentElement.getAttribute("data-theme")).toBe("template-04");
     await user.keyboard("{ArrowRight}");
-    expect(document.documentElement.getAttribute("data-theme")).toBe("template-01");
-    await user.keyboard("{ArrowLeft}");
     expect(document.documentElement.getAttribute("data-theme")).toBe("original-default");
+    await user.keyboard("{ArrowLeft}");
+    expect(document.documentElement.getAttribute("data-theme")).toBe("template-04");
   });
 
   it("R6-05: MobileNavDrawer memakai Trakteer surface adaptive tanpa teks amber pudar di tema terang", () => {

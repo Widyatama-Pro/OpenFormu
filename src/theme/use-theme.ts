@@ -39,6 +39,63 @@ export function isUiMode(value: string | null): value is UiMode {
   return value === "biasa" || value === "enhanced" || value === "anti-slop";
 }
 
+export interface PlatformThemeDefaults {
+  readonly palette: ThemePaletteId;
+  readonly mode: ThemeModeSetting;
+  readonly uiMode: UiMode;
+  readonly renderingEngine: RenderingEngineMode;
+  readonly motionEngine: MotionEngineMode;
+  readonly glassBlurPx: number;
+  readonly glowIntensityPct: number;
+}
+
+export function isAndroidPlatform(): boolean {
+  if (typeof window === "undefined") return false;
+  const win = window as Window & {
+    readonly Capacitor?: {
+      readonly getPlatform?: () => string;
+      readonly isNativePlatform?: () => boolean;
+    };
+    readonly OpenFormulSystemBars?: unknown;
+  };
+  const capPlatform = win.Capacitor?.getPlatform?.();
+  if (capPlatform === "android") return true;
+  if (capPlatform === "ios") return false;
+  if (win.Capacitor?.isNativePlatform?.() || Boolean(win.OpenFormulSystemBars)) {
+    return true;
+  }
+  const nav = win.navigator ?? (typeof navigator !== "undefined" ? navigator : undefined);
+  if (nav && /\bAndroid\b/i.test(nav.userAgent)) {
+    return true;
+  }
+  return false;
+}
+
+export function resolvePlatformThemeDefaults(
+  isAndroid: boolean = isAndroidPlatform(),
+): PlatformThemeDefaults {
+  if (isAndroid) {
+    return {
+      palette: "template-04",
+      mode: "light",
+      uiMode: "enhanced",
+      renderingEngine: "crisp",
+      motionEngine: "css_native",
+      glassBlurPx: 0,
+      glowIntensityPct: 60,
+    };
+  }
+  return {
+    palette: "template-04",
+    mode: "dark",
+    uiMode: "enhanced",
+    renderingEngine: "ultra",
+    motionEngine: "gpu_flip",
+    glassBlurPx: 20,
+    glowIntensityPct: 100,
+  };
+}
+
 export interface UsePortableThemeOptions {
   readonly storageKeyId?: string;
   readonly storageKeyMode?: string;
@@ -163,19 +220,20 @@ function applyThemeToDocument(
 }
 
 export function usePortableTheme(options: UsePortableThemeOptions = {}): PortableThemeState {
+  const platformDefaults = resolvePlatformThemeDefaults();
   const {
     storageKeyId = THEME_STORAGE_KEYS.id,
     storageKeyMode = THEME_STORAGE_KEYS.mode,
     storageKeyAmoled = THEME_STORAGE_KEYS.amoled,
-    defaultPalette = "original-default",
-    defaultMode = "light",
+    defaultPalette = platformDefaults.palette,
+    defaultMode = platformDefaults.mode,
     defaultAmoled = false,
     defaultUiMode,
     defaultUiEnhancer = true,
-    defaultRenderingEngine = "ultra",
-    defaultMotionEngine = "gpu_flip",
-    defaultGlassBlurPx = 20,
-    defaultGlowIntensityPct = 100,
+    defaultRenderingEngine = platformDefaults.renderingEngine,
+    defaultMotionEngine = platformDefaults.motionEngine,
+    defaultGlassBlurPx = platformDefaults.glassBlurPx,
+    defaultGlowIntensityPct = platformDefaults.glowIntensityPct,
     syncPwa = true,
     syncAndroid = true,
   } = options;
@@ -199,7 +257,7 @@ export function usePortableTheme(options: UsePortableThemeOptions = {}): Portabl
   });
 
   const resolvedDefaultUiMode: UiMode =
-    defaultUiMode ?? (defaultUiEnhancer === false ? "biasa" : "enhanced");
+    defaultUiMode ?? (defaultUiEnhancer === false ? "biasa" : platformDefaults.uiMode);
 
   const [uiMode, setUiModeState] = useState<UiMode>(() => {
     const savedUiMode = readStoredValue(THEME_STORAGE_KEYS.uiMode, LEGACY_STORAGE_KEYS.uiMode);
@@ -426,9 +484,9 @@ export function usePortableTheme(options: UsePortableThemeOptions = {}): Portabl
 export const ThemeContext = createContext<PortableThemeState | null>(null);
 
 const FALLBACK_THEME_STATE: PortableThemeState = {
-  paletteId: "original-default",
-  modeSetting: "light",
-  resolvedMode: "light",
+  paletteId: "template-04",
+  modeSetting: "dark",
+  resolvedMode: "dark",
   amoledPureBlack: false,
   uiMode: "enhanced",
   uiEnhancer: true,

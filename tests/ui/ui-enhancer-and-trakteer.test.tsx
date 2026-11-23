@@ -35,6 +35,9 @@ describe("UI Enhancer (5 Palettes Stepper), Simplified Engine & Trakteer Integra
     );
 
     expect(OPENFORMU_PALETTE_CATALOG).toHaveLength(5);
+    expect(OPENFORMU_PALETTE_CATALOG[0]?.id).toBe("template-04");
+    expect(document.documentElement.getAttribute("data-theme")).toBe("template-04");
+    expect(document.documentElement.getAttribute("data-mode")).toBe("dark");
     expect(document.documentElement.getAttribute("data-ui-mode")).toBe("enhanced");
     expect(document.documentElement.getAttribute("data-ui-enhancer")).toBe("true");
     expect(document.documentElement.getAttribute("data-engine-mode")).toBe("ultra");
@@ -107,7 +110,7 @@ describe("UI Enhancer (5 Palettes Stepper), Simplified Engine & Trakteer Integra
     expect(document.documentElement.getAttribute("data-ui-mode")).toBe("enhanced");
   });
 
-  it("menyederhanakan Rendering & Motion Engine menjadi Smooth (120 FPS) dan Standard (Biasa)", async () => {
+  it("menyederhanakan Performa & Animasi Tampilan menjadi Smooth dan Ringan dengan keterangan hover", async () => {
     const user = userEvent.setup();
     const onUpdate = vi.fn();
 
@@ -119,12 +122,17 @@ describe("UI Enhancer (5 Palettes Stepper), Simplified Engine & Trakteer Integra
 
     expect(screen.queryByLabelText("Intensitas Blur Kaca")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Intensitas Glow")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /Performa & Animasi Tampilan/i }),
+    ).toBeInTheDocument();
 
-    const standardRadio = screen.getByRole("radio", { name: /Standard \(Biasa\)/i });
-    const smoothRadio = screen.getByRole("radio", { name: /Smooth \(120 FPS\)/i });
+    const ringanRadio = screen.getByRole("radio", { name: /^Ringan$/i });
+    const smoothRadio = screen.getByRole("radio", { name: /^Smooth$/i });
     expect(smoothRadio).toHaveAttribute("aria-checked", "true");
+    expect(smoothRadio).toHaveAttribute("title", expect.stringMatching(/kaca akrilik mulus/i));
+    expect(ringanRadio).toHaveAttribute("title", expect.stringMatching(/Rendering ringan/i));
 
-    await user.click(standardRadio);
+    await user.click(ringanRadio);
     expect(document.documentElement.getAttribute("data-engine-mode")).toBe("crisp");
     expect(document.documentElement.getAttribute("data-motion-engine")).toBe("css_native");
     expect(document.documentElement.style.getPropertyValue("--ui-blur-px")).toBe("0px");
@@ -132,6 +140,33 @@ describe("UI Enhancer (5 Palettes Stepper), Simplified Engine & Trakteer Integra
     await user.click(smoothRadio);
     expect(document.documentElement.getAttribute("data-engine-mode")).toBe("ultra");
     expect(document.documentElement.getAttribute("data-motion-engine")).toBe("gpu_flip");
+  });
+
+  it("menerapkan default Android (Indigo Glasial, Terang, Enhanced, Ringan) secara otomatis pada platform Android", () => {
+    const uaSpy = vi
+      .spyOn(window.navigator, "userAgent", "get")
+      .mockReturnValue("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36");
+
+    try {
+      render(
+        <ThemeProvider>
+          <SettingsPage preferences={DEFAULT_PREFERENCES} onUpdate={vi.fn()} />
+        </ThemeProvider>,
+      );
+
+      expect(document.documentElement.getAttribute("data-theme")).toBe("template-04");
+      expect(document.documentElement.getAttribute("data-mode")).toBe("light");
+      expect(document.documentElement.getAttribute("data-ui-mode")).toBe("enhanced");
+      expect(document.documentElement.getAttribute("data-engine-mode")).toBe("crisp");
+      expect(document.documentElement.getAttribute("data-motion-engine")).toBe("css_native");
+      expect(document.documentElement.style.getPropertyValue("--ui-blur-px")).toBe("0px");
+      expect(screen.getByRole("radio", { name: /^Ringan$/i })).toHaveAttribute(
+        "aria-checked",
+        "true",
+      );
+    } finally {
+      uaSpy.mockRestore();
+    }
   });
 
   it("menampilkan tombol dukungan Trakteer dengan tautan aman di Sidebar maupun SettingsPage", async () => {

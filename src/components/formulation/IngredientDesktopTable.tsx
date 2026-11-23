@@ -302,6 +302,11 @@ const IngredientTableRow = memo(function IngredientTableRow({
 
       {coreCols.inclusion && (
         <td
+          title={pickLang(
+            language,
+            `Porsi ${ing.name} dalam total ransum (100%): ${formatNumberLocale(inclusionPct, incDigits)}%`,
+            `${ing.name} share in the total 100% ration: ${formatNumberLocale(inclusionPct, incDigits)}%`,
+          )}
           className={cn(
             "w-[72px] min-w-[72px] px-1.5 py-1 text-right tabular-nums",
             hasInclusion
@@ -675,11 +680,25 @@ export const IngredientDesktopTable = memo(function IngredientDesktopTable({
     [allIngredients, ingredients, language, onBatchIngredientsUpdate, orderedCols],
   );
 
-  const coreToggleItems: ReadonlyArray<{ readonly id: string; readonly label: string }> = [
+  const inclusionTooltip = pickLang(
+    language,
+    "Inklusi %: Persentase porsi bahan pakan dalam total ransum (100%) hasil perhitungan optimasi formulasi.",
+    "Inclusion %: Percentage share of this feed ingredient in the total ration (100%) calculated by the formulation solver.",
+  );
+
+  const coreToggleItems: ReadonlyArray<{
+    readonly id: string;
+    readonly label: string;
+    readonly title?: string;
+  }> = [
     { id: "price", label: pickLang(language, "Harga", "Price") },
     { id: "dm", label: pickLang(language, "BK", "DM") },
     { id: "bounds", label: "Min/Max" },
-    { id: "inclusion", label: pickLang(language, "Inklusi", "Inclusion") },
+    {
+      id: "inclusion",
+      label: pickLang(language, "Inklusi", "Inclusion"),
+      title: inclusionTooltip,
+    },
   ];
 
   const groupedNutrients = useMemo(() => {
@@ -917,6 +936,7 @@ export const IngredientDesktopTable = memo(function IngredientDesktopTable({
                           return (
                             <label
                               key={col.id}
+                              title={col.title}
                               className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 text-[11px] font-medium text-[var(--text-primary)] select-none md:min-h-0"
                             >
                               <input
@@ -1117,8 +1137,18 @@ export const IngredientDesktopTable = memo(function IngredientDesktopTable({
                 </>
               )}
               {coreCols.inclusion && (
-                <th className="w-[72px] min-w-[72px] border-b border-[var(--border-subtle)] bg-[var(--status-success-soft)] px-1.5 py-2 text-right text-[var(--status-success)]">
-                  {pickLang(language, "Inklusi %", "Inclusion %")}
+                <th
+                  title={inclusionTooltip}
+                  tabIndex={0}
+                  className="group/inc-th relative w-[72px] min-w-[72px] cursor-help border-b border-[var(--border-subtle)] bg-[var(--status-success-soft)] px-1.5 py-2 text-right text-[var(--status-success)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--focus-ring)]"
+                >
+                  <span>{pickLang(language, "Inklusi %", "Inclusion %")}</span>
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none invisible absolute top-full right-0 z-40 mt-1 w-56 rounded-lg border border-[var(--border-strong)] bg-[var(--bg-surface-elevated)] p-2 text-left text-[11px] font-medium leading-snug whitespace-normal text-[var(--text-primary)] opacity-0 shadow-[var(--shadow-neu-elevated)] transition-opacity duration-150 group-hover/inc-th:visible group-hover/inc-th:opacity-100 group-focus-visible/inc-th:visible group-focus-visible/inc-th:opacity-100"
+                  >
+                    {inclusionTooltip}
+                  </div>
                 </th>
               )}
               {visibleNutrients.map((nut) => {

@@ -2,6 +2,7 @@ import { HARTADI_FEEDS } from "./hartadi-feeds";
 import { KEARL_REQUIREMENTS, NRC_1988_DAIRY_REQUIREMENTS } from "./kearl-requirements";
 import { NRC_1994_POULTRY_REQUIREMENTS, SNI_REQUIREMENTS } from "./sni-requirements";
 import { resolveEffectiveConstraintBounds } from "../solver/modelHelpers";
+import { resolvePlatformThemeDefaults } from "../theme/use-theme";
 import type {
   Basis,
   BoundDualItem,
@@ -663,15 +664,19 @@ export const DEFAULT_CONFIG: FormulationConfig = {
   customNutrients: [],
 };
 
+const platformThemeDefaults = resolvePlatformThemeDefaults();
+
 export const DEFAULT_PREFERENCES: UserPreferences = {
   language: "id",
-  theme: "light",
-  uiMode: "enhanced",
-  uiEnhancer: true,
-  renderingEngine: "ultra",
-  motionEngine: "gpu_flip",
-  glassBlurPx: 20,
-  glowIntensityPct: 100,
+  theme: platformThemeDefaults.mode === "dark" ? "dark" : "light",
+  themePalette: platformThemeDefaults.palette,
+  themeModeSetting: platformThemeDefaults.mode,
+  uiMode: platformThemeDefaults.uiMode,
+  uiEnhancer: platformThemeDefaults.uiMode === "enhanced",
+  renderingEngine: platformThemeDefaults.renderingEngine,
+  motionEngine: platformThemeDefaults.motionEngine,
+  glassBlurPx: platformThemeDefaults.glassBlurPx,
+  glowIntensityPct: platformThemeDefaults.glowIntensityPct,
   defaultBasis: "as_fed",
   defaultBatchKg: 100,
   zeroInclusionDefaultPct: 1,

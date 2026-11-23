@@ -185,13 +185,15 @@ describe("OpenFormu Desktop UI Flow", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    // 1. Database Bahan: 8 klasifikasi & hanya Ekspor PDF
+    // 1. Database Bahan: 8 klasifikasi tanpa tombol ekspor database
     await user.click(screen.getAllByRole("button", { name: /Database Bahan/i })[0]!);
     expect(
       screen.getByRole("heading", { name: /Database Kandungan Bahan Pakan/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /Semua 8 Kelas/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Ekspor PDF/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Tambah Bahan/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Ekspor PDF/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Ekspor Excel/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Ekspor CSV/i })).not.toBeInTheDocument();
 
     // 2. Profil Kebutuhan Pakan: tabel ringkas + filter SNI
@@ -266,7 +268,12 @@ describe("OpenFormu Desktop UI Flow", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    expect(screen.getAllByRole("columnheader", { name: "Inklusi %" }).length).toBeGreaterThan(0);
+    const inclusionHeaders = screen.getAllByRole("columnheader", { name: "Inklusi %" });
+    expect(inclusionHeaders.length).toBeGreaterThan(0);
+    expect(inclusionHeaders[0]).toHaveAttribute(
+      "title",
+      expect.stringMatching(/Persentase porsi bahan pakan dalam total ransum/i),
+    );
     expect(screen.getByLabelText("Panel Target Nutrien")).toBeInTheDocument();
 
     await user.click(

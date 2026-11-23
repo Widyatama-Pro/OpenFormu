@@ -172,12 +172,12 @@ export const SettingsPage = memo(function SettingsPage({
     themeCtx?.setRenderingEngine("crisp");
     themeCtx?.setMotionEngine("css_native");
     themeCtx?.setGlassBlurPx(0);
-    themeCtx?.setGlowIntensityPct(0);
+    themeCtx?.setGlowIntensityPct(60);
     onUpdate({
       renderingEngine: "crisp",
       motionEngine: "css_native",
       glassBlurPx: 0,
-      glowIntensityPct: 0,
+      glowIntensityPct: 60,
     });
   };
 
@@ -472,20 +472,24 @@ export const SettingsPage = memo(function SettingsPage({
             />
           </Card>
 
-          {/* Kartu 3: Rendering & Motion Engine (2 Opsi Ringkas) */}
+          {/* Kartu 3: Performa & Animasi Tampilan (2 Opsi Ringkas) */}
           <Card interactive={false} className="space-y-4 p-4 sm:p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex items-start gap-3">
                 <GlossySquircleIcon tone="mint" size="sm" icon={<Gauge className="h-4 w-4" />} />
                 <div>
                   <h2 className="text-sm font-bold text-[var(--text-primary)]">
-                    {pickLang(lang, "Rendering & Motion Engine", "Rendering & Motion Engine")}
+                    {pickLang(
+                      lang,
+                      "Performa & Animasi Tampilan",
+                      "Display Animation & Performance",
+                    )}
                   </h2>
                   <p className="mt-0.5 text-xs text-[var(--text-muted)]">
                     {pickLang(
                       lang,
-                      "Pilih antara animasi kaca mulus 120 FPS atau tampilan standar hemat daya.",
-                      "Choose between smooth 120 FPS acrylic glass motion or battery-friendly standard rendering.",
+                      "Pilih tampilan animasi halus atau mode ringan hemat daya. Arahkan kursor ke opsi untuk detail.",
+                      "Choose smooth animated visuals or battery-friendly lightweight rendering. Hover an option for details.",
                     )}
                   </p>
                 </div>
@@ -493,42 +497,45 @@ export const SettingsPage = memo(function SettingsPage({
               <Badge tone="emerald">
                 <Zap className="h-3 w-3" />
                 <span>
-                  {isSmoothEnginePreset
-                    ? "Smooth (120 FPS)"
-                    : pickLang(lang, "Standard (Biasa)", "Standard")}
+                  {isSmoothEnginePreset ? "Smooth" : pickLang(lang, "Ringan", "Lightweight")}
                 </span>
               </Badge>
             </div>
 
             <div
               role="radiogroup"
-              aria-label={pickLang(lang, "Profil Rendering Engine", "Rendering Engine Profile")}
+              aria-label={pickLang(
+                lang,
+                "Profil Performa & Animasi Tampilan",
+                "Display Performance Profile",
+              )}
               className="grid grid-cols-1 gap-2.5 sm:grid-cols-2"
             >
               {(
                 [
                   {
                     id: "smooth",
-                    titleId: "Smooth (120 FPS)",
-                    titleEn: "Smooth (120 FPS)",
+                    titleId: "Smooth",
+                    titleEn: "Smooth",
                     descId:
-                      "Efek kaca akrilik mulus, transisi 120 FPS FLIP Physics anti-hardcut, dan glow penuh (Default).",
+                      "Efek kaca akrilik mulus, transisi 120 FPS FLIP Physics anti-hardcut, dan glow penuh (Default PC).",
                     descEn:
-                      "Smooth acrylic glass depth, 120 FPS anti-hardcut FLIP motion, and full volumetric glow (Default).",
+                      "Smooth acrylic glass depth, 120 FPS anti-hardcut FLIP motion, and full volumetric glow (PC Default).",
                   },
                   {
                     id: "standard",
-                    titleId: "Standard (Biasa)",
-                    titleEn: "Standard",
+                    titleId: "Ringan",
+                    titleEn: "Lightweight",
                     descId:
-                      "Rendering ringan tanpa shader blur & transisi standar untuk menghemat baterai atau GPU rendah.",
+                      "Rendering ringan tanpa shader blur & transisi cepat untuk menghemat baterai atau GPU rendah (Default Android).",
                     descEn:
-                      "Lightweight rendering without glass blur and standard transitions for battery saving or low-end GPUs.",
+                      "Lightweight rendering without glass blur and fast transitions for battery saving or optimal Android performance (Android Default).",
                   },
                 ] as const
               ).map((profile) => {
                 const selected =
                   profile.id === "smooth" ? isSmoothEnginePreset : !isSmoothEnginePreset;
+                const tooltipText = pickLang(lang, profile.descId, profile.descEn);
                 return (
                   <button
                     key={profile.id}
@@ -536,9 +543,10 @@ export const SettingsPage = memo(function SettingsPage({
                     role="radio"
                     aria-checked={selected}
                     data-engine-preset={profile.id}
+                    title={tooltipText}
                     onClick={() => handleSelectEnginePreset(profile.id)}
                     className={cn(
-                      "flex min-h-11 cursor-pointer flex-col border p-3.5 text-left transition-[transform,border-color,background-color,box-shadow] duration-150 motion-reduce:transform-none",
+                      "group relative flex min-h-11 cursor-pointer items-center justify-center border px-4 py-3 text-center transition-[transform,border-color,background-color,box-shadow] duration-150 motion-reduce:transform-none",
                       isAntiSlop
                         ? cn(
                             "rounded-lg",
@@ -557,8 +565,11 @@ export const SettingsPage = memo(function SettingsPage({
                     <span className="text-xs font-bold text-[var(--text-primary)]">
                       {pickLang(lang, profile.titleId, profile.titleEn)}
                     </span>
-                    <span className="mt-1 text-[11px] leading-snug text-[var(--text-secondary)]">
-                      {pickLang(lang, profile.descId, profile.descEn)}
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none invisible absolute bottom-full left-1/2 z-30 mb-2 w-64 -translate-x-1/2 rounded-lg border border-[var(--border-strong)] bg-[var(--bg-surface-elevated)] px-2.5 py-2 text-left text-[11px] font-normal leading-snug text-[var(--text-primary)] opacity-0 shadow-[var(--shadow-neu-elevated)] transition-opacity duration-150 group-hover:visible group-hover:opacity-100 group-focus-visible:visible group-focus-visible:opacity-100"
+                    >
+                      {tooltipText}
                     </span>
                   </button>
                 );

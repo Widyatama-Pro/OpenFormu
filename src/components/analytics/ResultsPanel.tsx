@@ -30,7 +30,7 @@ import { Badge } from "../ui/Badge";
 import { Card } from "../ui/Card";
 import { SegmentedTabs } from "../ui/SegmentedTabs";
 import { Switch } from "../ui/Switch";
-import { BatchMixerCalculator, type BatchPrecisionMode } from "./BatchMixerCalculator";
+import { BatchMixerCalculator } from "./BatchMixerCalculator";
 import { ConflictDiagnosticsBanner } from "./ConflictDiagnosticsBanner";
 import { FormulationCharts } from "./FormulationCharts";
 import { ShadowPriceTab } from "./ShadowPriceTab";
@@ -84,7 +84,6 @@ export const ResultsPanel = memo(function ResultsPanel({
   const isAntiSlop = useOptionalThemeContext()?.uiMode === "anti-slop";
   const emptyDash = isAntiSlop ? "-" : "—";
   const [internalSubTab, setInternalSubTab] = useState<ResultSubTab>("batch");
-  const [precisionMode, setPrecisionMode] = useState<BatchPrecisionMode>("dual");
   const subTab = activeSubTab ?? internalSubTab;
   const setSubTab = (next: ResultSubTab) => {
     setInternalSubTab(next);
@@ -295,8 +294,6 @@ export const ResultsPanel = memo(function ResultsPanel({
                   activeBasis={result.basis}
                   requirement={requirement}
                   costPerKg={result.costPerKg}
-                  precisionMode={precisionMode}
-                  onChangePrecisionMode={setPrecisionMode}
                   decimalPlaces={decimalPlaces}
                   language={language}
                 />
@@ -453,24 +450,9 @@ export const ResultsPanel = memo(function ResultsPanel({
                                   {targetText}
                                 </td>
                                 <td className="px-2.5 py-1.5 text-right font-bold tabular-nums text-[var(--text-primary)]">
-                                  {actualVal !== undefined ? (
-                                    precisionMode === "rounded" || nut.unit !== "%" ? (
-                                      `${formatNumberLocale(actualVal, nut.unit === "%" && precisionMode === "exact_3dec" ? 3 : digits)} ${nut.unit}`
-                                    ) : precisionMode === "exact_3dec" ? (
-                                      `${formatNumberLocale(actualVal, 3)} ${nut.unit}`
-                                    ) : (
-                                      <>
-                                        <span>
-                                          {formatNumberLocale(actualVal, 3)} {nut.unit}
-                                        </span>
-                                        <span className="ml-1 text-[10px] font-normal text-[var(--text-muted)]">
-                                          ({formatNumberLocale(actualVal, digits)})
-                                        </span>
-                                      </>
-                                    )
-                                  ) : (
-                                    emptyDash
-                                  )}
+                                  {actualVal !== undefined
+                                    ? `${formatNumberLocale(actualVal, nut.unit === "%" ? 2 : digits)} ${nut.unit}`
+                                    : emptyDash}
                                 </td>
                                 <td
                                   className={cn(

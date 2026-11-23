@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#F5F4EF" />
+    <meta name="theme-color" content="#141B26" />
     <meta
       name="description"
       content="OpenFormu: aplikasi formulasi pakan ternak presisi offline-first berbasis optimasi Linear Programming."
@@ -14,26 +14,36 @@
     <script>
       (function () {
         try {
+          var cap = window.Capacitor;
+          var capPlatform = cap && typeof cap.getPlatform === "function" ? cap.getPlatform() : "";
+          var isAndroid =
+            capPlatform === "android" ||
+            (capPlatform !== "ios" &&
+              ((cap && typeof cap.isNativePlatform === "function" && cap.isNativePlatform()) ||
+                Boolean(window.OpenFormulSystemBars) ||
+                (window.navigator && /\bAndroid\b/i.test(window.navigator.userAgent || "")) ||
+                (typeof navigator !== "undefined" &&
+                  /\bAndroid\b/i.test(navigator.userAgent || ""))));
           var validPalettes = [
+            "template-04",
             "original-default",
             "template-01",
             "template-03",
-            "template-04",
             "template-05",
           ];
           var palette =
             localStorage.getItem("openformu-theme-id") ||
             localStorage.getItem("openformul-theme-id") ||
             localStorage.getItem("app-theme-id") ||
-            "original-default";
+            "template-04";
           if (validPalettes.indexOf(palette) === -1) {
-            palette = "original-default";
+            palette = "template-04";
           }
           var modeSetting =
             localStorage.getItem("openformu-theme-mode") ||
             localStorage.getItem("openformul-theme-mode") ||
             localStorage.getItem("app-theme-mode") ||
-            "light";
+            (isAndroid ? "light" : "dark");
           var prefersDark =
             typeof window.matchMedia === "function" &&
             window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -52,12 +62,22 @@
               localStorage.getItem("openformul-theme-enhancer");
             uiMode = legacyEnhancer === "false" ? "biasa" : "enhanced";
           }
+          var engineMode =
+            localStorage.getItem("openformu-engine-mode") ||
+            localStorage.getItem("openformul-engine-mode") ||
+            (isAndroid ? "crisp" : "ultra");
+          var motionEngine =
+            localStorage.getItem("openformu-motion-engine") ||
+            localStorage.getItem("openformul-motion-engine") ||
+            (isAndroid ? "css_native" : "gpu_flip");
 
           var root = document.documentElement;
           root.setAttribute("data-theme", palette);
           root.setAttribute("data-mode", resolvedMode);
           root.setAttribute("data-ui-mode", uiMode);
           root.setAttribute("data-ui-enhancer", uiMode === "enhanced" ? "true" : "false");
+          root.setAttribute("data-engine-mode", engineMode);
+          root.setAttribute("data-motion-engine", motionEngine);
           if (resolvedMode === "dark") {
             root.classList.add("dark");
             if (amoled) {

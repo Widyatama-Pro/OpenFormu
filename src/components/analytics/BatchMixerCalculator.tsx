@@ -5,11 +5,7 @@ import { getCategoryLabel, pickLang } from "../../i18n";
 import { useOptionalThemeContext } from "../../theme";
 import type { AppLanguage, Basis, CompositionItem, Ingredient, Requirement } from "../../types";
 import { cn } from "../../utils/cn";
-import {
-  formatCurrencyIdr,
-  formatNumberLocale,
-  resolveDisplayDigits,
-} from "../../utils/locale-number";
+import { formatCurrencyIdr, formatNumberLocale } from "../../utils/locale-number";
 import { isPoultrySpecies } from "../../utils/species";
 import { NumericCellInput } from "../formulation/NumericCellInput";
 import { Badge } from "../ui/Badge";
@@ -189,20 +185,10 @@ export const BatchMixerCalculator = memo(function BatchMixerCalculator({
   ingredients,
   activeBasis,
   requirement,
-  costPerKg,
-  precisionMode: controlledPrecisionMode,
-  onChangePrecisionMode,
-  decimalPlaces = 0,
   language = "id",
 }: BatchMixerCalculatorProps) {
   const isAntiSlop = useOptionalThemeContext()?.uiMode === "anti-slop";
   const [printBatchOnly, setPrintBatchOnly] = useState(false);
-  const [localPrecisionMode, setLocalPrecisionMode] = useState<BatchPrecisionMode>("dual");
-  const precisionMode = controlledPrecisionMode ?? localPrecisionMode;
-  const setPrecisionMode = (next: BatchPrecisionMode) => {
-    setLocalPrecisionMode(next);
-    onChangePrecisionMode?.(next);
-  };
 
   const ingMap = useMemo(() => new Map(ingredients.map((i) => [i.id, i])), [ingredients]);
   const rationDmPct = useMemo(
@@ -213,18 +199,9 @@ export const BatchMixerCalculator = memo(function BatchMixerCalculator({
     () => estimateDailyConsumption(requirement, rationDmPct),
     [requirement, rationDmPct],
   );
-  const [customDmiOverride, setCustomDmiOverride] = useState<number | null>(null);
-  const [headCount, setHeadCount] = useState<number>(10);
 
-  const effectiveDmiKg = customDmiOverride ?? defaultIntake.dmiKgPerHead;
+  const effectiveDmiKg = defaultIntake.dmiKgPerHead;
   const effectiveAsFedKg = effectiveDmiKg / (rationDmPct / 100);
-  const totalFlockDmiKg = effectiveDmiKg * headCount;
-  const totalFlockAsFedKg = effectiveAsFedKg * headCount;
-  const dailyCostPerHead =
-    costPerKg !== null && costPerKg !== undefined
-      ? (activeBasis === "dry_matter" ? effectiveDmiKg : effectiveAsFedKg) * costPerKg
-      : null;
-  const batchCoverageHeadDays = effectiveAsFedKg > 0 ? batchSizeKg / effectiveAsFedKg : 0;
 
   return (
     <div className="space-y-3">
@@ -274,90 +251,28 @@ export const BatchMixerCalculator = memo(function BatchMixerCalculator({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <div
-            role="group"
-            aria-label={pickLang(
+        <label className="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] md:min-h-0">
+          <input
+            type="checkbox"
+            checked={printBatchOnly}
+            onChange={(e) => setPrintBatchOnly(e.target.checked)}
+            className="h-3.5 w-3.5 cursor-pointer rounded border-[var(--border-subtle)] accent-[var(--color-primary)]"
+          />
+          <EyeOff className="h-3.5 w-3.5" aria-hidden="true" />
+          <span>
+            {pickLang(
               language,
-              "Mode presisi angka hasil adukan",
-              "Batch result number precision mode",
+              "Mode Operator (Print Batch Only)",
+              "Operator Mode (Print Batch Only)",
             )}
-            className={cn(
-              "inline-flex min-h-11 items-center rounded-lg p-0.5 md:min-h-7",
-              isAntiSlop
-                ? "border border-[var(--border-subtle)] bg-[var(--bg-surface)]"
-                : "neu-pressed",
-            )}
-          >
-            {(
-              [
-                {
-                  id: "dual",
-                  label: pickLang(
-                    language,
-                    "2 Versi (xx,xxx & Bulat)",
-                    "2 Versions (xx.xxx & Rounded)",
-                  ),
-                },
-                {
-                  id: "exact_3dec",
-                  label: pickLang(language, "Presisi 0,00x", "Exact 0.00x"),
-                },
-                {
-                  id: "rounded",
-                  label: pickLang(language, "Bulat", "Rounded"),
-                },
-              ] as const
-            ).map((opt) => {
-              const active = precisionMode === opt.id;
-              return (
-                <button
-                  key={opt.id}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => setPrecisionMode(opt.id)}
-                  className={cn(
-                    "min-h-11 cursor-pointer rounded-md px-2 py-1 text-[10px] font-bold transition-colors md:min-h-6 md:py-0.5",
-                    active
-                      ? isAntiSlop
-                        ? "border border-[var(--color-primary)] bg-[var(--bg-surface-elevated)] text-[var(--text-primary)]"
-                        : "bg-[var(--color-primary)] text-[var(--text-on-primary)] shadow-[var(--shadow-neu-flat)]"
-                      : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
-                  )}
-                >
-                  {opt.label}
-                </button>
-              );
-            })}
-          </div>
-
-          <label className="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] md:min-h-0">
-            <input
-              type="checkbox"
-              checked={printBatchOnly}
-              onChange={(e) => setPrintBatchOnly(e.target.checked)}
-              className="h-3.5 w-3.5 cursor-pointer rounded border-[var(--border-subtle)] accent-[var(--color-primary)]"
-            />
-            <EyeOff className="h-3.5 w-3.5" aria-hidden="true" />
-            <span>
-              {pickLang(
-                language,
-                "Mode Operator (Print Batch Only)",
-                "Operator Mode (Print Batch Only)",
-              )}
-            </span>
-          </label>
-        </div>
+          </span>
+        </label>
       </div>
 
-      {/* Kartu Total Konsumsi Harian (BK & Segar As-Fed), Relatif % BB & Saran Pemberian */}
+      {/* Kartu Ringkas Konsumsi Harian (BK & Segar As-Fed) */}
       {composition.length > 0 && (
         <section
-          aria-label={pickLang(
-            language,
-            "Total Konsumsi Pakan Harian & Estimasi Pemberian",
-            "Daily Feed Intake & Feeding Recommendation",
-          )}
+          aria-label={pickLang(language, "Total Konsumsi Pakan Harian", "Daily Feed Intake")}
           className={cn(
             "space-y-2.5 rounded-xl border p-3 text-xs",
             isAntiSlop
@@ -371,8 +286,8 @@ export const BatchMixerCalculator = memo(function BatchMixerCalculator({
               <h3 className="font-bold text-[var(--text-primary)]">
                 {pickLang(
                   language,
-                  "Total Konsumsi Harian Ternak (BK & Segar As-Fed) + Estimasi",
-                  "Daily Livestock Feed Intake (DM & Fresh As-Fed) + Estimate",
+                  "Total Konsumsi Harian Ternak (BK & Segar As-Fed)",
+                  "Daily Livestock Feed Intake (DM & Fresh As-Fed)",
                 )}
               </h3>
             </div>
@@ -385,13 +300,13 @@ export const BatchMixerCalculator = memo(function BatchMixerCalculator({
             </Badge>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-sunken)] p-2">
               <span className="block text-[10px] font-semibold text-[var(--text-secondary)]">
                 {pickLang(language, "Konsumsi BK / Hari", "Daily DM Intake (DMI)")}
               </span>
               <span className="mt-0.5 block text-sm font-bold tabular-nums text-[var(--status-success)]">
-                {formatNumberLocale(effectiveDmiKg, 3)} kg/hr
+                {formatNumberLocale(effectiveDmiKg, 2)} kg/hr
               </span>
               <span className="block text-[10px] tabular-nums text-[var(--text-muted)]">
                 {defaultIntake.dmiPctBw !== null
@@ -399,7 +314,7 @@ export const BatchMixerCalculator = memo(function BatchMixerCalculator({
                       (effectiveDmiKg / (defaultIntake.bodyWeightKg ?? 1)) * 100,
                       2,
                     )}% BB (${defaultIntake.bodyWeightKg} kg)`
-                  : `${formatNumberLocale(effectiveDmiKg * 1000, 1)} g BK/ekor/hr`}
+                  : `${formatNumberLocale(effectiveDmiKg * 1000, 2)} g BK/ekor/hr`}
               </span>
             </div>
 
@@ -412,7 +327,7 @@ export const BatchMixerCalculator = memo(function BatchMixerCalculator({
                 )}
               </span>
               <span className="mt-0.5 block text-sm font-bold tabular-nums text-[var(--text-primary)]">
-                {formatNumberLocale(effectiveAsFedKg, 3)} kg/hr
+                {formatNumberLocale(effectiveAsFedKg, 2)} kg/hr
               </span>
               <span className="block text-[10px] tabular-nums text-[var(--text-muted)]">
                 {defaultIntake.asFedPctBw !== null
@@ -420,109 +335,8 @@ export const BatchMixerCalculator = memo(function BatchMixerCalculator({
                       (effectiveAsFedKg / (defaultIntake.bodyWeightKg ?? 1)) * 100,
                       2,
                     )}% BB Segar`
-                  : `${formatNumberLocale(effectiveAsFedKg * 1000, 1)} g As-Fed/ekor/hr`}
+                  : `${formatNumberLocale(effectiveAsFedKg * 1000, 2)} g As-Fed/ekor/hr`}
               </span>
-            </div>
-
-            <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-sunken)] p-2">
-              <span className="block text-[10px] font-semibold text-[var(--text-secondary)]">
-                {pickLang(
-                  language,
-                  `Total ${headCount} Ekor / Hari`,
-                  `Total ${headCount} Head / Day`,
-                )}
-              </span>
-              <span className="mt-0.5 block text-sm font-bold tabular-nums text-[var(--text-primary)]">
-                {formatNumberLocale(totalFlockAsFedKg, 3)} kg As-Fed
-              </span>
-              <span className="block text-[10px] tabular-nums text-[var(--text-muted)]">
-                {formatNumberLocale(totalFlockDmiKg, 3)} kg BK ·{" "}
-                {dailyCostPerHead !== null
-                  ? `${formatCurrencyIdr(dailyCostPerHead)}/${pickLang(language, "ekor/hr", "head/d")}`
-                  : "-"}
-              </span>
-            </div>
-
-            <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-sunken)] p-2">
-              <span className="block text-[10px] font-semibold text-[var(--text-secondary)]">
-                {pickLang(
-                  language,
-                  `Estimasi Cukup (${batchSizeKg} kg)`,
-                  `Batch Coverage (${batchSizeKg} kg)`,
-                )}
-              </span>
-              <span className="mt-0.5 block text-sm font-bold tabular-nums text-[var(--status-warning)]">
-                {formatNumberLocale(batchCoverageHeadDays, 1)}{" "}
-                {pickLang(language, "ekor-hari", "head-days")}
-              </span>
-              <span className="block text-[10px] tabular-nums text-[var(--text-muted)]">
-                {headCount > 0
-                  ? `~${formatNumberLocale(batchCoverageHeadDays / headCount, 1)} ${pickLang(
-                      language,
-                      `hari utk ${headCount} ekor`,
-                      `days for ${headCount} head`,
-                    )}`
-                  : "-"}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border-subtle)] pt-2 text-[11px]">
-            <p className="min-w-0 flex-1 leading-relaxed text-[var(--text-secondary)]">
-              <strong className="text-[var(--text-primary)]">
-                {pickLang(language, "Estimasi & Saran:", "Estimate & Advice:")}
-              </strong>{" "}
-              {language === "id" ? defaultIntake.feedingAdviceId : defaultIntake.feedingAdviceEn}{" "}
-              <span className="text-[10px] text-[var(--text-muted)]">
-                ({language === "id" ? defaultIntake.sourceNoteId : defaultIntake.sourceNoteEn})
-              </span>
-            </p>
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="inline-flex items-center gap-1 text-[10px] font-semibold text-[var(--text-secondary)]">
-                <span>{pickLang(language, "Target BK/hr (kg):", "Target DM/d (kg):")}</span>
-                <div className="w-18">
-                  <NumericCellInput
-                    value={effectiveDmiKg}
-                    min={0.005}
-                    max={50}
-                    fractionDigits={3}
-                    fallbackOnEmpty={defaultIntake.dmiKgPerHead}
-                    commitOnChange
-                    ariaLabel={pickLang(
-                      language,
-                      "Konsumsi BK harian per ekor kg",
-                      "Daily DM intake per head kg",
-                    )}
-                    onCommit={(val) => {
-                      if (val === null || Math.abs(val - defaultIntake.dmiKgPerHead) < 1e-4) {
-                        setCustomDmiOverride(null);
-                      } else {
-                        setCustomDmiOverride(val);
-                      }
-                    }}
-                  />
-                </div>
-              </label>
-              <label className="inline-flex items-center gap-1 text-[10px] font-semibold text-[var(--text-secondary)]">
-                <span>{pickLang(language, "Populasi (ekor):", "Flock/Herd (head):")}</span>
-                <div className="w-16">
-                  <NumericCellInput
-                    value={headCount}
-                    min={1}
-                    max={100000}
-                    treatSingleThousandDot
-                    fractionDigits={0}
-                    fallbackOnEmpty={10}
-                    commitOnChange
-                    ariaLabel={pickLang(
-                      language,
-                      "Jumlah populasi ternak ekor",
-                      "Livestock head count",
-                    )}
-                    onCommit={(val) => setHeadCount(Math.max(1, Math.round(val ?? 10)))}
-                  />
-                </div>
-              </label>
             </div>
           </div>
         </section>
@@ -598,29 +412,18 @@ export const BatchMixerCalculator = memo(function BatchMixerCalculator({
                     {pickLang(language, "Bahan Pakan", "Feed Ingredient")}
                   </th>
                   <th className="px-2 py-2 text-right">
-                    {precisionMode === "rounded"
-                      ? pickLang(language, "Porsi %", "Share %")
-                      : pickLang(language, "Porsi % (0,00x)", "Share % (0.00x)")}
+                    {pickLang(language, "Porsi %", "Share %")}
                   </th>
                   {activeBasis === "dry_matter" && (
                     <th className="px-2 py-2 text-right">As-Fed %</th>
                   )}
-                  {precisionMode !== "rounded" && (
-                    <th className="px-2 py-2 text-right">
-                      {pickLang(
-                        language,
-                        `Takaran Presisi (${batchSizeKg} kg)`,
-                        `Exact Weight (${batchSizeKg} kg)`,
-                      )}
-                    </th>
-                  )}
-                  {precisionMode !== "exact_3dec" && (
-                    <th className="px-2 py-2 text-right">
-                      {precisionMode === "dual"
-                        ? pickLang(language, "Takaran Bulat (kg)", "Rounded Weight (kg)")
-                        : pickLang(language, "Takaran (kg)", "Weight (kg)")}
-                    </th>
-                  )}
+                  <th className="px-2 py-2 text-right">
+                    {pickLang(
+                      language,
+                      `Takaran (${batchSizeKg} kg)`,
+                      `Weight (${batchSizeKg} kg)`,
+                    )}
+                  </th>
                   <th className="px-2 py-2 text-right">
                     {pickLang(language, "Konsumsi/hr (kg)", "Daily Intake (kg)")}
                   </th>
@@ -641,15 +444,6 @@ export const BatchMixerCalculator = memo(function BatchMixerCalculator({
                   const weightKg = item.weightKg ?? afShare * batchSizeKg;
                   const dailyIngAsFedKg = afShare * effectiveAsFedKg;
                   const dailyIngDmKg = item.fraction * effectiveDmiKg;
-                  const pctDigits =
-                    precisionMode === "rounded"
-                      ? resolveDisplayDigits("%", "inclusion", decimalPlaces, pct)
-                      : 3;
-                  const afDigits =
-                    precisionMode === "rounded"
-                      ? resolveDisplayDigits("%", "inclusion", decimalPlaces, afPct)
-                      : 3;
-                  const wtRoundedDigits = Math.max(1, decimalPlaces);
                   const ingName = ing
                     ? language === "id"
                       ? ing.name
@@ -665,38 +459,21 @@ export const BatchMixerCalculator = memo(function BatchMixerCalculator({
                         {ingName}
                       </td>
                       <td className="px-2 py-1.5 text-right font-semibold tabular-nums text-[var(--status-success)]">
-                        {formatNumberLocale(pct, pctDigits)}%
-                        {precisionMode === "dual" && (
-                          <span className="ml-1 text-[10px] font-normal text-[var(--text-muted)]">
-                            (
-                            {formatNumberLocale(
-                              pct,
-                              resolveDisplayDigits("%", "inclusion", decimalPlaces, pct),
-                            )}
-                            %)
-                          </span>
-                        )}
+                        {formatNumberLocale(pct, 2)}%
                       </td>
                       {activeBasis === "dry_matter" && (
                         <td className="px-2 py-1.5 text-right tabular-nums text-[var(--text-secondary)]">
-                          {formatNumberLocale(afPct, afDigits)}%
+                          {formatNumberLocale(afPct, 2)}%
                         </td>
                       )}
-                      {precisionMode !== "rounded" && (
-                        <td className="px-2 py-1.5 text-right font-bold tabular-nums text-[var(--text-primary)]">
-                          {formatNumberLocale(weightKg, 3)} kg
-                        </td>
-                      )}
-                      {precisionMode !== "exact_3dec" && (
-                        <td className="px-2 py-1.5 text-right font-semibold tabular-nums text-[var(--text-secondary)]">
-                          {formatNumberLocale(weightKg, wtRoundedDigits)} kg
-                        </td>
-                      )}
+                      <td className="px-2 py-1.5 text-right font-bold tabular-nums text-[var(--text-primary)]">
+                        {formatNumberLocale(weightKg, 2)} kg
+                      </td>
                       <td
-                        title={`${pickLang(language, "BK:", "DM:")} ${formatNumberLocale(dailyIngDmKg, 3)} kg/hr`}
+                        title={`${pickLang(language, "BK:", "DM:")} ${formatNumberLocale(dailyIngDmKg, 2)} kg/hr`}
                         className="px-2 py-1.5 text-right tabular-nums text-[var(--text-secondary)]"
                       >
-                        {formatNumberLocale(dailyIngAsFedKg, 3)} kg
+                        {formatNumberLocale(dailyIngAsFedKg, 2)} kg
                       </td>
                       {!printBatchOnly && (
                         <td className="px-3 py-1.5 text-right tabular-nums text-[var(--text-secondary)]">
@@ -720,9 +497,6 @@ export const BatchMixerCalculator = memo(function BatchMixerCalculator({
               const afPct = afShare * 100;
               const weightKg = item.weightKg ?? afShare * batchSizeKg;
               const dailyIngAsFedKg = afShare * effectiveAsFedKg;
-              const pctDigits = resolveDisplayDigits("%", "inclusion", decimalPlaces, pct);
-              const afDigits = resolveDisplayDigits("%", "inclusion", decimalPlaces, afPct);
-              const wtDigits = Math.max(1, decimalPlaces);
               const ingName = ing
                 ? language === "id"
                   ? ing.name
@@ -746,18 +520,14 @@ export const BatchMixerCalculator = memo(function BatchMixerCalculator({
                       </span>
                     </div>
                     <span className="shrink-0 text-xs font-bold tabular-nums text-[var(--status-success)]">
-                      {precisionMode === "rounded"
-                        ? `${formatNumberLocale(pct, pctDigits)}% · ${formatNumberLocale(weightKg, wtDigits)} kg`
-                        : precisionMode === "exact_3dec"
-                          ? `${formatNumberLocale(pct, 3)}% · ${formatNumberLocale(weightKg, 3)} kg`
-                          : `${formatNumberLocale(pct, 3)}% (${formatNumberLocale(pct, pctDigits)}%) · ${formatNumberLocale(weightKg, 3)} kg (${formatNumberLocale(weightKg, wtDigits)} kg)`}
+                      {formatNumberLocale(pct, 2)}% · {formatNumberLocale(weightKg, 2)} kg
                     </span>
                   </div>
                   <div className="mt-1.5 flex flex-wrap items-center justify-between gap-1 text-[11px] tabular-nums text-[var(--text-secondary)]">
                     <span>
                       {activeBasis === "dry_matter"
-                        ? `${pickLang(language, "Segar As-Fed:", "Fresh As-Fed:")} ${formatNumberLocale(afPct, precisionMode === "rounded" ? afDigits : 3)}% · ${pickLang(language, "Harian:", "Daily:")} ${formatNumberLocale(dailyIngAsFedKg, 3)} kg/hr`
-                        : `${pickLang(language, "Kategori:", "Category:")} ${ing ? getCategoryLabel(language, ing.category) : "-"} · ${pickLang(language, "Harian:", "Daily:")} ${formatNumberLocale(dailyIngAsFedKg, 3)} kg/hr`}
+                        ? `${pickLang(language, "Segar As-Fed:", "Fresh As-Fed:")} ${formatNumberLocale(afPct, 2)}% · ${pickLang(language, "Harian:", "Daily:")} ${formatNumberLocale(dailyIngAsFedKg, 2)} kg/hr`
+                        : `${pickLang(language, "Kategori:", "Category:")} ${ing ? getCategoryLabel(language, ing.category) : "-"} · ${pickLang(language, "Harian:", "Daily:")} ${formatNumberLocale(dailyIngAsFedKg, 2)} kg/hr`}
                     </span>
                     {!printBatchOnly ? (
                       <span className="font-semibold text-[var(--text-primary)]">

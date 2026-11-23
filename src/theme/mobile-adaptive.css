@@ -116,6 +116,17 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Android / Lightweight Engine Scroll & Paint Optimization without sacrificing visual polish */
+[data-engine-mode="crisp"] .glass-card,
+[data-engine-mode="crisp"] .acrylic-panel,
+[data-engine-mode="crisp"] .acrylic-subcard {
+  contain: style;
+}
+
+[data-engine-mode="crisp"] .glass-card-interactive:hover {
+  transform: none;
+}
+
 /* Android & Phone Landscape Mode (compact vertical chrome + full playable ergonomics) */
 @media (orientation: landscape) and (max-height: 540px) {
   .landscape-compact-header {

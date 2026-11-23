@@ -725,7 +725,7 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
           )}
 
           {commodity === "cattle_beef" && (
-            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <div className="flex min-w-0 flex-wrap items-center gap-2.5">
               <div className="min-w-0 flex-1 sm:w-44 sm:flex-none">
                 <ThemedSelect
                   ariaLabel={pickLang(language, "Status fisiologis sapi potong", "Beef status")}
@@ -743,7 +743,7 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
                 />
               </div>
 
-              <label className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] font-medium text-[var(--text-secondary)]">
+              <label className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[11px] font-medium text-[var(--text-secondary)]">
                 <span>{pickLang(language, "BB", "BW")}</span>
                 <NumericCellInput
                   value={beefBw}
@@ -762,13 +762,13 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
                       applyBeefUpdate(v, beefAdg, beefState);
                     }
                   }}
-                  className="min-h-11 w-[4.5rem] shrink-0 px-1.5 py-0 text-[11px] md:h-7 md:min-h-7"
+                  className="min-h-11 w-20 shrink-0 px-2 py-0 text-[11px] md:h-7 md:min-h-7"
                 />
                 <span>kg</span>
               </label>
 
               {beefState === "growth" && (
-                <label className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] font-medium text-[var(--text-secondary)]">
+                <label className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[11px] font-medium text-[var(--text-secondary)]">
                   <span>{pickLang(language, "PBBH", "ADG")}</span>
                   <NumericCellInput
                     value={beefAdg}
@@ -783,7 +783,7 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
                         applyBeefUpdate(beefBw, v, beefState);
                       }
                     }}
-                    className="min-h-11 w-[4.5rem] shrink-0 px-1.5 py-0 text-[11px] md:h-7 md:min-h-7"
+                    className="min-h-11 w-[4.75rem] shrink-0 px-2 py-0 text-[11px] md:h-7 md:min-h-7"
                   />
                   <span>kg/hr</span>
                 </label>
@@ -802,8 +802,8 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
           )}
 
           {commodity === "cattle_dairy" && (
-            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-              <label className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] font-medium text-[var(--text-secondary)]">
+            <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+              <label className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[11px] font-medium text-[var(--text-secondary)]">
                 <span>{pickLang(language, "BB", "BW")}</span>
                 <NumericCellInput
                   value={dairyBw}
@@ -822,14 +822,14 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
                       applyDairyUpdate(v, dairyMilk, dairyFat, dairyStandard, dairyDry);
                     }
                   }}
-                  className="min-h-11 w-[4.5rem] shrink-0 px-1.5 py-0 text-[11px] md:h-7 md:min-h-7"
+                  className="min-h-11 w-20 shrink-0 px-2 py-0 text-[11px] md:h-7 md:min-h-7"
                 />
                 <span>kg</span>
               </label>
 
               {!dairyDry && (
                 <>
-                  <label className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] font-medium text-[var(--text-secondary)]">
+                  <label className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[11px] font-medium text-[var(--text-secondary)]">
                     <span>{pickLang(language, "Susu", "Milk")}</span>
                     <NumericCellInput
                       value={dairyMilk}
@@ -848,12 +848,12 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
                           applyDairyUpdate(dairyBw, v, dairyFat, dairyStandard, dairyDry);
                         }
                       }}
-                      className="min-h-11 w-16 shrink-0 px-1.5 py-0 text-[11px] md:h-7 md:min-h-7"
+                      className="min-h-11 w-[4.75rem] shrink-0 px-2 py-0 text-[11px] md:h-7 md:min-h-7"
                     />
                     <span>L</span>
                   </label>
 
-                  <label className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] font-medium text-[var(--text-secondary)]">
+                  <label className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[11px] font-medium text-[var(--text-secondary)]">
                     <span>{pickLang(language, "Lemak", "Fat")}</span>
                     <NumericCellInput
                       value={dairyFat}
@@ -868,7 +868,7 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
                           applyDairyUpdate(dairyBw, dairyMilk, v, dairyStandard, dairyDry);
                         }
                       }}
-                      className="min-h-11 w-16 shrink-0 px-1.5 py-0 text-[11px] md:h-7 md:min-h-7"
+                      className="min-h-11 w-[4.75rem] shrink-0 px-2 py-0 text-[11px] md:h-7 md:min-h-7"
                     />
                     <span>%</span>
                   </label>

@@ -56,8 +56,7 @@ describe("Revisi 8 — Input Numerik Bebas-Kosong, Presisi 0.00x, Konsumsi Haria
     expect(onCommit).toHaveBeenCalledWith(0.5);
   });
 
-  it("R8-03: BatchMixerCalculator menampilkan Total Konsumsi Harian (BK & Segar As-Fed) dan 2 Versi Presisi (xx,xxx & Bulat)", async () => {
-    const user = userEvent.setup();
+  it("R8-03: BatchMixerCalculator menampilkan Konsumsi Harian ringkas (BK & Segar As-Fed) dan format otomatis 2 angka di belakang koma", () => {
     const kearlReq = KEARL_REQUIREMENTS[0]!; // Sapi Potong 200 kg (BK 5,40 kg)
     const dmPct = 86.5;
     const est = estimateDailyConsumption(kearlReq, dmPct);
@@ -89,13 +88,19 @@ describe("Revisi 8 — Input Numerik Bebas-Kosong, Presisi 0.00x, Konsumsi Haria
     expect(
       screen.getByText(/Total Konsumsi Harian Ternak \(BK & Segar As-Fed\)/i),
     ).toBeInTheDocument();
-    expect(screen.getByText(/Takaran Presisi \(100 kg\)/i)).toBeInTheDocument();
-    expect(screen.getByText(/Takaran Bulat \(kg\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Konsumsi BK \/ Hari/i)).toBeInTheDocument();
+    expect(screen.getByText(/Konsumsi Segar \(As-Fed\) \/ Hari/i)).toBeInTheDocument();
+    expect(screen.getByText(/Takaran \(100 kg\)/i)).toBeInTheDocument();
 
-    // Beralih ke mode Bulat menyembunyikan kolom Takaran Presisi (100 kg)
-    const roundedBtn = screen.getByRole("button", { name: /^Bulat$/i });
-    await user.click(roundedBtn);
-    expect(screen.queryByText(/Takaran Presisi \(100 kg\)/i)).not.toBeInTheDocument();
+    // Elemen yang disederhanakan / dihapus sesuai revisi terbaru
+    expect(screen.queryByText(/Total 10 Ekor \/ Hari/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Estimasi Cukup/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Estimasi & Saran/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Target BK\/hr/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Populasi \(ekor\)/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /2 Versi/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Presisi 0,00x/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Bulat$/i })).not.toBeInTheDocument();
   });
 
   it("R8-04 & R8-05: Katalog terkalibrasi Kearl 1982 & NRC 1994 bebas duplikat, ekspor .xlsx 4-sheet lengkap, dan PDF memiliki Head Kop & Tail Kop", () => {

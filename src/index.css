@@ -483,16 +483,40 @@
     backdrop-filter: blur(var(--ui-blur-px, 12px)) saturate(140%);
   }
 
+  [data-engine-mode="crisp"] .shell-frame::after,
+  [data-engine-mode="crisp"] .workspace-canvas::after {
+    display: none;
+  }
+
   [data-engine-mode="crisp"] .glass-card,
   [data-engine-mode="crisp"] .acrylic-panel,
   [data-engine-mode="crisp"] .acrylic-control-capsule,
   [data-engine-mode="crisp"] .acrylic-subcard,
+  [data-engine-mode="crisp"] .trakteer-glass-card,
+  [data-engine-mode="crisp"] .backdrop-blur-sm,
+  [data-engine-mode="crisp"] .backdrop-blur,
+  [data-engine-mode="crisp"] .backdrop-blur-md,
+  [data-engine-mode="crisp"] .backdrop-blur-lg,
+  [data-engine-mode="crisp"] .backdrop-blur-xl,
+  [data-engine-mode="crisp"] [class*="backdrop-blur"],
   [data-ui-enhancer="false"]:not([data-ui-mode="anti-slop"]) .glass-card,
   [data-ui-enhancer="false"]:not([data-ui-mode="anti-slop"]) .acrylic-panel,
   [data-ui-enhancer="false"]:not([data-ui-mode="anti-slop"]) .acrylic-control-capsule,
   [data-ui-enhancer="false"]:not([data-ui-mode="anti-slop"]) .acrylic-subcard {
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
+    --tw-backdrop-blur: initial;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  [data-engine-mode="crisp"][data-ui-enhancer="true"] {
+    --glass-sticky-bg: color-mix(in srgb, var(--bg-sunken) 94%, var(--color-primary));
+  }
+
+  [data-engine-mode="crisp"][data-ui-enhancer="true"] .glass-card,
+  [data-engine-mode="crisp"][data-ui-enhancer="true"] .acrylic-panel,
+  [data-engine-mode="crisp"][data-ui-enhancer="true"] .acrylic-control-capsule,
+  [data-engine-mode="crisp"][data-ui-enhancer="true"] .acrylic-subcard {
+    background-color: color-mix(in srgb, var(--bg-surface-elevated) 92%, transparent);
   }
 
   [data-ui-enhancer="false"]:not([data-ui-mode="anti-slop"]) .glass-card,

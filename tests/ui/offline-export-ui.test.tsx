@@ -167,10 +167,7 @@ describe("UI Export PDF-Only, 8 Kelas Database, TSV Paste & Settings Formulasi",
     expect(onDeleteRecipe).toHaveBeenCalledWith(MOCK_SAVED_RECIPES[0]!.id);
   });
 
-  it("IngredientLibraryPage: mengelompokkan bahan ke 8 kelas standar dan menyediakan ekspor PDF saja", async () => {
-    const binSpy = vi.spyOn(downloadUtils, "downloadBinaryFile").mockImplementation(() => {});
-    const user = userEvent.setup();
-
+  it("IngredientLibraryPage: mengelompokkan bahan ke 8 kelas standar tanpa tombol ekspor database", () => {
     render(
       <IngredientLibraryPage
         ingredients={MOCK_INGREDIENTS.slice(0, 20)}
@@ -182,15 +179,14 @@ describe("UI Export PDF-Only, 8 Kelas Database, TSV Paste & Settings Formulasi",
 
     expect(screen.queryByRole("button", { name: /Ekspor CSV/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Impor CSV/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Ekspor Excel/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Ekspor PDF/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Tambah Bahan/i })).toBeInTheDocument();
 
     expect(screen.getByRole("tab", { name: /1\. Hijauan Kering/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /4\. Sumber Energi/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /5\. Sumber Protein/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /8\. Aditif/i })).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: /Ekspor PDF/i }));
-    expect(binSpy).toHaveBeenCalledTimes(1);
-    expect(binSpy.mock.calls[0]![1]).toMatch(/\.pdf$/);
   });
 
   it("IngredientDesktopTable: mendukung Paste TSV blok dari Excel/Sheets & abaikan tempelan skalar 1 sel", () => {

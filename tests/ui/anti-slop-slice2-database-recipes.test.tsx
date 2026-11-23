@@ -65,15 +65,9 @@ describe("M3 Slice 2: Database Bahan, Standar Nutrien, Resep Tersimpan & Dialog 
     vi.restoreAllMocks();
   });
 
-  it("IngredientLibraryPage: popover Kolom aksesibel (focus trap, Escape/Tutup restore focus, 375px modal sheet), empty DB CTA & error PDF role=alert", async () => {
+  it("IngredientLibraryPage: popover Kolom aksesibel (focus trap, Escape/Tutup restore focus, 375px modal sheet), bebas tombol ekspor & empty DB CTA", async () => {
     const user = userEvent.setup();
     window.localStorage.setItem(THEME_STORAGE_KEYS.uiMode, "anti-slop");
-
-    const pdfSpy = vi
-      .spyOn(storageModule, "generateIngredientDatabasePdf")
-      .mockImplementation(() => {
-        throw new Error("PDF font tidak tersedia");
-      });
 
     const onOpenAdd = vi.fn();
     render(
@@ -87,6 +81,10 @@ describe("M3 Slice 2: Database Bahan, Standar Nutrien, Resep Tersimpan & Dialog 
         />
       </ThemeProvider>,
     );
+
+    // Tombol ekspor database telah dihapus sesuai revisi
+    expect(screen.queryByRole("button", { name: /Ekspor PDF/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Ekspor Excel/i })).not.toBeInTheDocument();
 
     // Popover Kolom a11y
     const trigger = screen.getByRole("button", { name: /Kolom/i });
@@ -119,13 +117,6 @@ describe("M3 Slice 2: Database Bahan, Standar Nutrien, Resep Tersimpan & Dialog 
     } finally {
       restoreViewport();
     }
-
-    // Export PDF failure renders role=alert + min-h-11 Tutup button
-    await user.click(screen.getByRole("button", { name: /Ekspor PDF/i }));
-    expect(pdfSpy).toHaveBeenCalled();
-    const alertBox = screen.getByRole("alert");
-    expect(alertBox).toHaveTextContent(/PDF font tidak tersedia/i);
-    expect(within(alertBox).getByRole("button", { name: "Tutup" }).className).toContain("min-h-11");
 
     // Scroll buttons 44px on mobile
     expect(screen.getByRole("button", { name: /Geser tab kelas ke kiri/i }).className).toContain(

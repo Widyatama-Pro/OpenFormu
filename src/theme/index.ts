@@ -1,10 +1,13 @@
 export { ThemeProvider, type ThemeProviderProps } from "./ThemeProvider";
 export {
   THEME_STORAGE_KEYS,
+  isAndroidPlatform,
   isUiMode,
+  resolvePlatformThemeDefaults,
   useOptionalThemeContext,
   usePortableTheme,
   useTheme,
+  type PlatformThemeDefaults,
   type PortableThemeState,
   type ThemeContextValue,
   type UsePortableThemeOptions,
