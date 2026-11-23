@@ -1,7 +1,4 @@
-import {
-  computeRationDryMatterPct,
-  estimateDailyConsumption,
-} from "../components/analytics/BatchMixerCalculator";
+import { computeRationDryMatterPct, estimateDailyConsumption } from "../components/analytics/BatchMixerCalculator";
 import { FEED_CLASSES, resolveFeedClass } from "../data/feed-classes";
 import type { FormulationResult, Ingredient, Nutrient, Recipe, Requirement } from "../types";
 import { resolveDisplayDigits } from "../utils/locale-number";
@@ -106,65 +103,65 @@ interface PdfColumnCell {
 
 type PdfRowOp =
   | {
-      readonly kind: "head_kop";
-      readonly docCode: string;
-      readonly institutionTitle: string;
-      readonly title: string;
-      readonly subtitle: string;
-      readonly printedAt: string;
-      readonly height: number;
-    }
+    readonly kind: "head_kop";
+    readonly docCode: string;
+    readonly institutionTitle: string;
+    readonly title: string;
+    readonly subtitle: string;
+    readonly printedAt: string;
+    readonly height: number;
+  }
   | {
-      readonly kind: "tail_kop";
-      readonly docCode: string;
-      readonly referenceNote: string;
-      readonly leftRole: string;
-      readonly centerRole: string;
-      readonly rightRole: string;
-      readonly height: number;
-    }
+    readonly kind: "tail_kop";
+    readonly docCode: string;
+    readonly referenceNote: string;
+    readonly leftRole: string;
+    readonly centerRole: string;
+    readonly rightRole: string;
+    readonly height: number;
+  }
   | {
-      readonly kind: "alert";
-      readonly text: string;
-      readonly height: number;
-    }
+    readonly kind: "alert";
+    readonly text: string;
+    readonly height: number;
+  }
   | {
-      readonly kind: "section";
-      readonly title: string;
-      readonly subtitle?: string;
-      readonly height: number;
-    }
+    readonly kind: "section";
+    readonly title: string;
+    readonly subtitle?: string;
+    readonly height: number;
+  }
   | {
-      readonly kind: "kv";
-      readonly label: string;
-      readonly value: string;
-      readonly boldValue?: boolean;
-      readonly height: number;
-    }
+    readonly kind: "kv";
+    readonly label: string;
+    readonly value: string;
+    readonly boldValue?: boolean;
+    readonly height: number;
+  }
   | {
-      readonly kind: "table_header";
-      readonly cells: readonly PdfColumnCell[];
-      readonly height: number;
-    }
+    readonly kind: "table_header";
+    readonly cells: readonly PdfColumnCell[];
+    readonly height: number;
+  }
   | {
-      readonly kind: "table_row";
-      readonly cells: readonly PdfColumnCell[];
-      readonly shaded?: boolean;
-      readonly bold?: boolean;
-      readonly height: number;
-    }
+    readonly kind: "table_row";
+    readonly cells: readonly PdfColumnCell[];
+    readonly shaded?: boolean;
+    readonly bold?: boolean;
+    readonly height: number;
+  }
   | {
-      readonly kind: "text";
-      readonly text: string;
-      readonly bold?: boolean;
-      readonly size?: number;
-      readonly muted?: boolean;
-      readonly height: number;
-    }
+    readonly kind: "text";
+    readonly text: string;
+    readonly bold?: boolean;
+    readonly size?: number;
+    readonly muted?: boolean;
+    readonly height: number;
+  }
   | {
-      readonly kind: "spacer";
-      readonly height: number;
-    };
+    readonly kind: "spacer";
+    readonly height: number;
+  };
 
 function paginateOps(ops: readonly PdfRowOp[]): PdfRowOp[][] {
   const pages: PdfRowOp[][] = [];
@@ -432,12 +429,8 @@ function renderStructuredPageStream(
   }
 
   // Page Footer (Tail Kop Halaman) dengan garis ganda dan identitas dokumen
-  out.push(
-    `0.059 0.239 0.243 RG 0.8 w ${MARGIN_L} 40 m ${(MARGIN_L + CONTENT_W).toFixed(1)} 40 l S`,
-  );
-  out.push(
-    `0.063 0.725 0.506 RG 0.4 w ${MARGIN_L} 38 m ${(MARGIN_L + CONTENT_W).toFixed(1)} 38 l S`,
-  );
+  out.push(`0.059 0.239 0.243 RG 0.8 w ${MARGIN_L} 40 m ${(MARGIN_L + CONTENT_W).toFixed(1)} 40 l S`);
+  out.push(`0.063 0.725 0.506 RG 0.4 w ${MARGIN_L} 38 m ${(MARGIN_L + CONTENT_W).toFixed(1)} 38 l S`);
   out.push(
     `0.35 0.42 0.50 rg BT /F2 7.2 Tf ${MARGIN_L} 27 Td (${escapePdfString(
       `OpenFormu — Sistem Formulasi Ransum Presisi | Dok: ${runningDocCode}`,
@@ -598,7 +591,7 @@ export function generateFormulationPdf(input: PdfExportInput): Uint8Array {
     const dailyCost =
       result.costPerKg !== null
         ? (result.basis === "dry_matter" ? dmiEst.dmiKgPerHead : dmiEst.asFedKgPerHead) *
-          result.costPerKg
+        result.costPerKg
         : null;
     ops.push({
       kind: "kv",
@@ -763,65 +756,65 @@ export function generateFormulationPdf(input: PdfExportInput): Uint8Array {
     cells:
       mode === "batch_only"
         ? [
-            { text: "TOTAL KOMPOSISI", x: MARGIN_L + 23, width: 200, align: "left" },
-            {
-              text: "100.000%",
-              x: MARGIN_L + 225,
-              width: 52,
-              align: "right",
-            },
-            {
-              text: `${formatNum(totalAsFed, 3)}%`,
-              x: MARGIN_L + 280,
-              width: 52,
-              align: "right",
-            },
-            {
-              text: `${formatNum(totalWeight, 3)} kg`,
-              x: MARGIN_L + 335,
-              width: 68,
-              align: "right",
-            },
-            {
-              text: `${formatNum(totalWeight, totalWeightDigits)} kg`,
-              x: MARGIN_L + 406,
-              width: 64,
-              align: "right",
-            },
-          ]
+          { text: "TOTAL KOMPOSISI", x: MARGIN_L + 23, width: 200, align: "left" },
+          {
+            text: "100.000%",
+            x: MARGIN_L + 225,
+            width: 52,
+            align: "right",
+          },
+          {
+            text: `${formatNum(totalAsFed, 3)}%`,
+            x: MARGIN_L + 280,
+            width: 52,
+            align: "right",
+          },
+          {
+            text: `${formatNum(totalWeight, 3)} kg`,
+            x: MARGIN_L + 335,
+            width: 68,
+            align: "right",
+          },
+          {
+            text: `${formatNum(totalWeight, totalWeightDigits)} kg`,
+            x: MARGIN_L + 406,
+            width: 64,
+            align: "right",
+          },
+        ]
         : [
-            { text: "TOTAL KOMPOSISI", x: MARGIN_L + 22, width: 166, align: "left" },
-            {
-              text: "100.000%",
-              x: MARGIN_L + 190,
-              width: 46,
-              align: "right",
-            },
-            {
-              text: `${formatNum(totalAsFed, 3)}%`,
-              x: MARGIN_L + 238,
-              width: 46,
-              align: "right",
-            },
-            {
-              text: `${formatNum(totalWeight, 3)} kg`,
-              x: MARGIN_L + 286,
-              width: 56,
-              align: "right",
-            },
-            {
-              text: `${formatNum(totalWeight, totalWeightDigits)} kg`,
-              x: MARGIN_L + 344,
-              width: 50,
-              align: "right",
-            },
-            {
-              text: formatIdr(result.batchTotalCost),
-              x: MARGIN_L + 454,
-              width: 58,
-              align: "right",
-            },
-          ],
+          { text: "TOTAL KOMPOSISI", x: MARGIN_L + 22, width: 166, align: "left" },
+          {
+            text: "100.000%",
+            x: MARGIN_L + 190,
+            width: 46,
+            align: "right",
+          },
+          {
+            text: `${formatNum(totalAsFed, 3)}%`,
+            x: MARGIN_L + 238,
+            width: 46,
+            align: "right",
+          },
+          {
+            text: `${formatNum(totalWeight, 3)} kg`,
+            x: MARGIN_L + 286,
+            width: 56,
+            align: "right",
+          },
+          {
+            text: `${formatNum(totalWeight, totalWeightDigits)} kg`,
+            x: MARGIN_L + 344,
+            width: 50,
+            align: "right",
+          },
+          {
+            text: formatIdr(result.batchTotalCost),
+            x: MARGIN_L + 454,
+            width: 58,
+            align: "right",
+          },
+        ],
   });
 
   if (mode === "full") {

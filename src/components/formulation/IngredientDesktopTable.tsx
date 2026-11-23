@@ -209,7 +209,7 @@ const IngredientTableRow = memo(function IngredientTableRow({
               ariaLabel={`Harga/kg ${ing.name}`}
               className={cn(
                 hasOverride &&
-                  "border-[var(--status-warning)] bg-[var(--status-warning-soft)] text-[var(--status-warning)]",
+                "border-[var(--status-warning)] bg-[var(--status-warning-soft)] text-[var(--status-warning)]",
               )}
               onCommit={(next) => {
                 if (next === null) return;
@@ -351,7 +351,7 @@ const IngredientTableRow = memo(function IngredientTableRow({
               ariaLabel={`${nut.name} ${ing.name}`}
               className={cn(
                 isNull &&
-                  "border-dashed border-[var(--status-warning-border)] bg-[var(--status-warning-soft)]",
+                "border-dashed border-[var(--status-warning-border)] bg-[var(--status-warning-soft)]",
               )}
               onCommit={(next) =>
                 onUpdateIngredient(ing.id, {
@@ -864,17 +864,17 @@ export const IngredientDesktopTable = memo(function IngredientDesktopTable({
                     "bg-[var(--bg-surface-elevated)] p-3 text-xs focus:outline-none",
                     isMobileViewport
                       ? cn(
-                          "w-full border-t p-4",
-                          isAntiSlop
-                            ? "rounded-t-xl border-[var(--border-strong)] shadow-[var(--shadow-neu-elevated)]"
-                            : "rounded-t-2xl border-[var(--border-subtle)] shadow-[0_-18px_48px_-12px_rgba(0,0,0,0.45)]",
-                        )
+                        "w-full border-t p-4",
+                        isAntiSlop
+                          ? "rounded-t-xl border-[var(--border-strong)] shadow-[var(--shadow-neu-elevated)]"
+                          : "rounded-t-2xl border-[var(--border-subtle)] shadow-[0_-18px_48px_-12px_rgba(0,0,0,0.45)]",
+                      )
                       : cn(
-                          "absolute right-0 z-40 mt-1.5 w-72 max-w-[calc(100vw-2rem)] rounded-xl border sm:w-80",
-                          isAntiSlop
-                            ? "border-[var(--border-strong)] shadow-[var(--shadow-neu-elevated)]"
-                            : "border-[var(--border-subtle)] shadow-[0_14px_34px_-10px_rgba(0,0,0,0.28)]",
-                        ),
+                        "absolute right-0 z-40 mt-1.5 w-72 max-w-[calc(100vw-2rem)] rounded-xl border sm:w-80",
+                        isAntiSlop
+                          ? "border-[var(--border-strong)] shadow-[var(--shadow-neu-elevated)]"
+                          : "border-[var(--border-subtle)] shadow-[0_14px_34px_-10px_rgba(0,0,0,0.28)]",
+                      ),
                   )}
                 >
                   <div className="mb-2 flex items-center justify-between gap-2 border-b border-[var(--border-subtle)] pb-1.5">
@@ -1043,7 +1043,9 @@ export const IngredientDesktopTable = memo(function IngredientDesktopTable({
                   <span className="truncate">{pickLang(language, "Nama Bahan", "Ingredient")}</span>
                   <button
                     type="button"
-                    onClick={() => setNameColWidth((w) => (w < 260 ? 300 : DEFAULT_NAME_COL_WIDTH))}
+                    onClick={() =>
+                      setNameColWidth((w) => (w < 260 ? 300 : DEFAULT_NAME_COL_WIDTH))
+                    }
                     title={pickLang(
                       language,
                       "Perlebar atau ringkas kolom Nama Bahan",

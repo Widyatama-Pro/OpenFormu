@@ -2,10 +2,7 @@ import { FEED_CLASSES, resolveFeedClass } from "../data/feed-classes";
 import { MOCK_NUTRIENTS } from "../data/mock-state";
 import type { FormulationResult, Ingredient, Nutrient, Requirement } from "../types";
 import { resolveDisplayDigits } from "../utils/locale-number";
-import {
-  computeRationDryMatterPct,
-  estimateDailyConsumption,
-} from "../components/analytics/BatchMixerCalculator";
+import { computeRationDryMatterPct, estimateDailyConsumption } from "../components/analytics/BatchMixerCalculator";
 
 export interface FormulationExportInput {
   readonly recipeName: string;
