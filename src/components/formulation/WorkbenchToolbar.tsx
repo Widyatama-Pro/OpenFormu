@@ -455,15 +455,15 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
       {uiEnhancer && <HeroAmbientGlassBackdrop />}
 
       <div className="relative z-10 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
-        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 lg:contents">
-          <div className="flex shrink-0 items-center gap-2 lg:order-1">
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-1.5 sm:gap-2 lg:contents">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 lg:order-1">
             {!isAntiSlop && (
               <span
                 aria-hidden="true"
                 className="h-6 w-1.5 shrink-0 rounded-full bg-gradient-to-b from-[var(--status-success)] via-[var(--color-accent)] to-[var(--color-primary)] shadow-[0_0_12px_var(--glow-primary-soft,rgba(16,185,129,0.4))] lg:h-7"
               />
             )}
-            <h1 className="whitespace-nowrap text-[14px] font-extrabold tracking-tight text-[var(--text-primary)] sm:text-base lg:text-[20px] lg:leading-tight">
+            <h1 className="whitespace-nowrap text-[13px] font-extrabold tracking-tight text-[var(--text-primary)] sm:text-base lg:text-[20px] lg:leading-tight">
               <span aria-hidden="true" className="sm:hidden">
                 <AnimatedTextSwap text={pickLang(language, "Formulasi", "Ration")} />
               </span>
@@ -723,8 +723,8 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
           )}
 
           {commodity === "cattle_beef" && (
-            <div className="flex min-w-0 flex-wrap items-center gap-2.5">
-              <div className="min-w-0 flex-1 sm:w-44 sm:flex-none">
+            <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:gap-2.5">
+              <div className="w-full min-w-0 sm:w-44 sm:shrink-0">
                 <ThemedSelect
                   ariaLabel={pickLang(language, "Status fisiologis sapi potong", "Beef status")}
                   modalTitle={pickLang(
@@ -741,55 +741,77 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
                 />
               </div>
 
-              <label className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[11px] font-medium text-[var(--text-secondary)]">
-                <span>{pickLang(language, "BB", "BW")}</span>
-                <NumericCellInput
-                  value={beefBw}
-                  min={80}
-                  max={900}
-                  fractionDigits={0}
-                  fallbackOnEmpty={beefBw}
-                  commitOnChange
-                  ariaLabel={pickLang(
-                    language,
-                    "Bobot badan sapi potong kg",
-                    "Beef body weight kg",
-                  )}
-                  onCommit={(v) => {
-                    if (v !== null && Number.isFinite(v) && v > 0) {
-                      applyBeefUpdate(v, beefAdg, beefState);
-                    }
-                  }}
-                  className="min-h-11 w-20 shrink-0 px-2 py-0 text-[11px] md:h-7 md:min-h-7"
-                />
-                <span>kg</span>
-              </label>
-
-              {beefState === "growth" && (
-                <label className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[11px] font-medium text-[var(--text-secondary)]">
-                  <span>{pickLang(language, "PBBH", "ADG")}</span>
-                  <NumericCellInput
-                    value={beefAdg}
-                    min={0}
-                    max={1.5}
-                    fractionDigits={2}
-                    fallbackOnEmpty={beefAdg}
-                    commitOnChange
-                    ariaLabel={pickLang(language, "Target PBBH kg per hari", "Target ADG kg/day")}
-                    onCommit={(v) => {
-                      if (v !== null && Number.isFinite(v) && v >= 0) {
-                        applyBeefUpdate(beefBw, v, beefState);
-                      }
-                    }}
-                    className="min-h-11 w-[4.75rem] shrink-0 px-2 py-0 text-[11px] md:h-7 md:min-h-7"
-                  />
-                  <span>kg/hr</span>
+              <div
+                className={cn(
+                  "grid w-full gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-2.5",
+                  beefState === "growth" ? "grid-cols-2" : "grid-cols-1",
+                )}
+              >
+                <label className="flex min-w-0 flex-col gap-1 text-[11px] font-medium text-[var(--text-secondary)] sm:inline-flex sm:shrink-0 sm:flex-row sm:items-center sm:gap-1.5 sm:whitespace-nowrap">
+                  <span className="px-0.5 sm:hidden">
+                    {pickLang(language, "BB (kg)", "BW (kg)")}
+                  </span>
+                  <span className="hidden sm:inline">{pickLang(language, "BB", "BW")}</span>
+                  <span className="block w-full sm:w-20 sm:shrink-0">
+                    <NumericCellInput
+                      value={beefBw}
+                      min={80}
+                      max={900}
+                      fractionDigits={0}
+                      fallbackOnEmpty={beefBw}
+                      commitOnChange
+                      ariaLabel={pickLang(
+                        language,
+                        "Bobot badan sapi potong kg",
+                        "Beef body weight kg",
+                      )}
+                      onCommit={(v) => {
+                        if (v !== null && Number.isFinite(v) && v > 0) {
+                          applyBeefUpdate(v, beefAdg, beefState);
+                        }
+                      }}
+                      className="min-h-11 w-full px-2 py-0 text-[11px] md:h-7 md:min-h-7"
+                    />
+                  </span>
+                  <span className="hidden sm:inline">kg</span>
                 </label>
-              )}
+
+                {beefState === "growth" && (
+                  <label className="flex min-w-0 flex-col gap-1 text-[11px] font-medium text-[var(--text-secondary)] sm:inline-flex sm:shrink-0 sm:flex-row sm:items-center sm:gap-1.5 sm:whitespace-nowrap">
+                    <span className="px-0.5 sm:hidden">
+                      {pickLang(language, "PBBH (kg/hr)", "ADG (kg/d)")}
+                    </span>
+                    <span className="hidden sm:inline">{pickLang(language, "PBBH", "ADG")}</span>
+                    <span className="block w-full sm:w-[4.75rem] sm:shrink-0">
+                      <NumericCellInput
+                        value={beefAdg}
+                        min={0}
+                        max={1.5}
+                        fractionDigits={2}
+                        fallbackOnEmpty={beefAdg}
+                        commitOnChange
+                        ariaLabel={pickLang(
+                          language,
+                          "Target PBBH kg per hari",
+                          "Target ADG kg/day",
+                        )}
+                        onCommit={(v) => {
+                          if (v !== null && Number.isFinite(v) && v >= 0) {
+                            applyBeefUpdate(beefBw, v, beefState);
+                          }
+                        }}
+                        className="min-h-11 w-full px-2 py-0 text-[11px] md:h-7 md:min-h-7"
+                      />
+                    </span>
+                    <span className="hidden sm:inline">kg/hr</span>
+                  </label>
+                )}
+              </div>
 
               <Badge
                 tone={beefPreview.isExtrapolated ? "amber" : "emerald"}
                 title={beefPreview.sourceLabel}
+                className="self-start sm:self-auto"
               >
                 DMI {formatNumberLocale(beefPreview.dmiKg, 1)} kg ·{" "}
                 {beefPreview.isExtrapolated
@@ -800,129 +822,162 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
           )}
 
           {commodity === "cattle_dairy" && (
-            <div className="flex min-w-0 flex-wrap items-center gap-2.5">
-              <label className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[11px] font-medium text-[var(--text-secondary)]">
-                <span>{pickLang(language, "BB", "BW")}</span>
-                <NumericCellInput
-                  value={dairyBw}
-                  min={200}
-                  max={900}
-                  fractionDigits={0}
-                  fallbackOnEmpty={dairyBw}
-                  commitOnChange
-                  ariaLabel={pickLang(
-                    language,
-                    "Bobot badan sapi perah kg",
-                    "Dairy body weight kg",
-                  )}
-                  onCommit={(v) => {
-                    if (v !== null && Number.isFinite(v) && v > 0) {
-                      applyDairyUpdate(v, dairyMilk, dairyFat, dairyStandard, dairyDry);
-                    }
-                  }}
-                  className="min-h-11 w-20 shrink-0 px-2 py-0 text-[11px] md:h-7 md:min-h-7"
-                />
-                <span>kg</span>
-              </label>
-
-              {!dairyDry && (
-                <>
-                  <label className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[11px] font-medium text-[var(--text-secondary)]">
-                    <span>{pickLang(language, "Susu", "Milk")}</span>
+            <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:gap-2.5">
+              <div
+                className={cn(
+                  "grid w-full gap-1.5 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-2.5",
+                  dairyDry ? "grid-cols-1" : "grid-cols-3",
+                )}
+              >
+                <label className="flex min-w-0 flex-col gap-1 text-[11px] font-medium text-[var(--text-secondary)] sm:inline-flex sm:shrink-0 sm:flex-row sm:items-center sm:gap-1.5 sm:whitespace-nowrap">
+                  <span className="px-0.5 sm:hidden">
+                    {pickLang(language, "BB (kg)", "BW (kg)")}
+                  </span>
+                  <span className="hidden sm:inline">{pickLang(language, "BB", "BW")}</span>
+                  <span className="block w-full sm:w-20 sm:shrink-0">
                     <NumericCellInput
-                      value={dairyMilk}
-                      min={0}
-                      max={65}
-                      fractionDigits={1}
-                      fallbackOnEmpty={dairyMilk}
+                      value={dairyBw}
+                      min={200}
+                      max={900}
+                      fractionDigits={0}
+                      fallbackOnEmpty={dairyBw}
                       commitOnChange
                       ariaLabel={pickLang(
                         language,
-                        "Target produksi susu liter per hari",
-                        "Milk yield L/day",
+                        "Bobot badan sapi perah kg",
+                        "Dairy body weight kg",
                       )}
                       onCommit={(v) => {
-                        if (v !== null && Number.isFinite(v) && v >= 0) {
-                          applyDairyUpdate(dairyBw, v, dairyFat, dairyStandard, dairyDry);
-                        }
-                      }}
-                      className="min-h-11 w-[4.75rem] shrink-0 px-2 py-0 text-[11px] md:h-7 md:min-h-7"
-                    />
-                    <span>L</span>
-                  </label>
-
-                  <label className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[11px] font-medium text-[var(--text-secondary)]">
-                    <span>{pickLang(language, "Lemak", "Fat")}</span>
-                    <NumericCellInput
-                      value={dairyFat}
-                      min={2.5}
-                      max={6.0}
-                      fractionDigits={1}
-                      fallbackOnEmpty={dairyFat}
-                      commitOnChange
-                      ariaLabel={pickLang(language, "Kadar lemak susu persen", "Milk fat %")}
-                      onCommit={(v) => {
                         if (v !== null && Number.isFinite(v) && v > 0) {
-                          applyDairyUpdate(dairyBw, dairyMilk, v, dairyStandard, dairyDry);
+                          applyDairyUpdate(v, dairyMilk, dairyFat, dairyStandard, dairyDry);
                         }
                       }}
-                      className="min-h-11 w-[4.75rem] shrink-0 px-2 py-0 text-[11px] md:h-7 md:min-h-7"
+                      className="min-h-11 w-full px-2 py-0 text-[11px] md:h-7 md:min-h-7"
                     />
-                    <span>%</span>
-                  </label>
-                </>
-              )}
+                  </span>
+                  <span className="hidden sm:inline">kg</span>
+                </label>
 
-              <div
-                role="group"
-                aria-label={pickLang(language, "Standar referensi sapi perah", "Dairy standard")}
-                className={cn(
-                  "inline-flex min-h-11 items-center rounded-lg p-0.5 md:min-h-7",
-                  isAntiSlop
-                    ? "border border-[var(--border-subtle)] bg-[var(--bg-sunken)]"
-                    : "neu-pressed",
+                {!dairyDry && (
+                  <>
+                    <label className="flex min-w-0 flex-col gap-1 text-[11px] font-medium text-[var(--text-secondary)] sm:inline-flex sm:shrink-0 sm:flex-row sm:items-center sm:gap-1.5 sm:whitespace-nowrap">
+                      <span className="px-0.5 sm:hidden">
+                        {pickLang(language, "Susu (L)", "Milk (L)")}
+                      </span>
+                      <span className="hidden sm:inline">{pickLang(language, "Susu", "Milk")}</span>
+                      <span className="block w-full sm:w-[4.75rem] sm:shrink-0">
+                        <NumericCellInput
+                          value={dairyMilk}
+                          min={0}
+                          max={65}
+                          fractionDigits={1}
+                          fallbackOnEmpty={dairyMilk}
+                          commitOnChange
+                          ariaLabel={pickLang(
+                            language,
+                            "Target produksi susu liter per hari",
+                            "Milk yield L/day",
+                          )}
+                          onCommit={(v) => {
+                            if (v !== null && Number.isFinite(v) && v >= 0) {
+                              applyDairyUpdate(dairyBw, v, dairyFat, dairyStandard, dairyDry);
+                            }
+                          }}
+                          className="min-h-11 w-full px-2 py-0 text-[11px] md:h-7 md:min-h-7"
+                        />
+                      </span>
+                      <span className="hidden sm:inline">L</span>
+                    </label>
+
+                    <label className="flex min-w-0 flex-col gap-1 text-[11px] font-medium text-[var(--text-secondary)] sm:inline-flex sm:shrink-0 sm:flex-row sm:items-center sm:gap-1.5 sm:whitespace-nowrap">
+                      <span className="px-0.5 sm:hidden">
+                        {pickLang(language, "Lemak (%)", "Fat (%)")}
+                      </span>
+                      <span className="hidden sm:inline">{pickLang(language, "Lemak", "Fat")}</span>
+                      <span className="block w-full sm:w-[4.75rem] sm:shrink-0">
+                        <NumericCellInput
+                          value={dairyFat}
+                          min={2.5}
+                          max={6.0}
+                          fractionDigits={1}
+                          fallbackOnEmpty={dairyFat}
+                          commitOnChange
+                          ariaLabel={pickLang(language, "Kadar lemak susu persen", "Milk fat %")}
+                          onCommit={(v) => {
+                            if (v !== null && Number.isFinite(v) && v > 0) {
+                              applyDairyUpdate(dairyBw, dairyMilk, v, dairyStandard, dairyDry);
+                            }
+                          }}
+                          className="min-h-11 w-full px-2 py-0 text-[11px] md:h-7 md:min-h-7"
+                        />
+                      </span>
+                      <span className="hidden sm:inline">%</span>
+                    </label>
+                  </>
                 )}
-              >
-                {(
-                  [
-                    { id: "kearl_1982", label: "Kearl 82" },
-                    { id: "nrc_1988", label: "NRC 88" },
-                  ] as const
-                ).map((std) => (
-                  <button
-                    key={std.id}
-                    type="button"
-                    aria-pressed={dairyStandard === std.id}
-                    onClick={() => applyDairyUpdate(dairyBw, dairyMilk, dairyFat, std.id, dairyDry)}
-                    className={cn(
-                      "min-h-11 cursor-pointer rounded-md px-2.5 py-1 text-[10px] font-semibold transition-colors md:min-h-6 md:px-2 md:py-0.5",
-                      dairyStandard === std.id
-                        ? isAntiSlop
-                          ? "border border-[var(--color-primary)] bg-[var(--bg-surface-elevated)] text-[var(--text-primary)]"
-                          : "bg-[var(--bg-surface-elevated)] text-[var(--text-primary)] shadow-[var(--shadow-neu-flat)]"
-                        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
-                    )}
-                  >
-                    {std.label}
-                  </button>
-                ))}
               </div>
 
-              <label className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 px-1 text-[11px] font-medium text-[var(--text-secondary)] md:min-h-0">
-                <input
-                  type="checkbox"
-                  checked={dairyDry}
-                  onChange={(e) =>
-                    applyDairyUpdate(dairyBw, dairyMilk, dairyFat, dairyStandard, e.target.checked)
-                  }
-                  className="h-3.5 w-3.5 cursor-pointer rounded accent-[var(--color-primary)]"
-                />
-                <span>{pickLang(language, "Kering", "Dry")}</span>
-              </label>
+              <div className="flex flex-wrap items-center gap-2 sm:contents">
+                <div
+                  role="group"
+                  aria-label={pickLang(language, "Standar referensi sapi perah", "Dairy standard")}
+                  className={cn(
+                    "inline-flex min-h-11 items-center rounded-lg p-0.5 md:min-h-7",
+                    isAntiSlop
+                      ? "border border-[var(--border-subtle)] bg-[var(--bg-sunken)]"
+                      : "neu-pressed",
+                  )}
+                >
+                  {(
+                    [
+                      { id: "kearl_1982", label: "Kearl 82" },
+                      { id: "nrc_1988", label: "NRC 88" },
+                    ] as const
+                  ).map((std) => (
+                    <button
+                      key={std.id}
+                      type="button"
+                      aria-pressed={dairyStandard === std.id}
+                      onClick={() =>
+                        applyDairyUpdate(dairyBw, dairyMilk, dairyFat, std.id, dairyDry)
+                      }
+                      className={cn(
+                        "min-h-11 cursor-pointer rounded-md px-2.5 py-1 text-[10px] font-semibold transition-colors md:min-h-6 md:px-2 md:py-0.5",
+                        dairyStandard === std.id
+                          ? isAntiSlop
+                            ? "border border-[var(--color-primary)] bg-[var(--bg-surface-elevated)] text-[var(--text-primary)]"
+                            : "bg-[var(--bg-surface-elevated)] text-[var(--text-primary)] shadow-[var(--shadow-neu-flat)]"
+                          : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+                      )}
+                    >
+                      {std.label}
+                    </button>
+                  ))}
+                </div>
+
+                <label className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 px-1 text-[11px] font-medium text-[var(--text-secondary)] md:min-h-0">
+                  <input
+                    type="checkbox"
+                    checked={dairyDry}
+                    onChange={(e) =>
+                      applyDairyUpdate(
+                        dairyBw,
+                        dairyMilk,
+                        dairyFat,
+                        dairyStandard,
+                        e.target.checked,
+                      )
+                    }
+                    className="h-3.5 w-3.5 cursor-pointer rounded accent-[var(--color-primary)]"
+                  />
+                  <span>{pickLang(language, "Kering", "Dry")}</span>
+                </label>
+              </div>
 
               <Badge
                 tone={dairyPreview.isExtrapolated ? "amber" : "emerald"}
                 title={dairyPreview.sourceLabel}
+                className="self-start sm:self-auto"
               >
                 {!dairyDry && `FCM ${formatNumberLocale(dairyPreview.fcm4PctKg ?? 0, 1)} kg · `}
                 DMI {formatNumberLocale(dairyPreview.dmiKg, 1)} kg ·{" "}
@@ -954,74 +1009,79 @@ export const WorkbenchToolbar = memo(function WorkbenchToolbar({
               />
             </div>
           )}
-          <div
-            role="group"
-            aria-label={pickLang(
-              language,
-              "Pilih basis As-Fed atau Bahan Kering",
-              "Select As-Fed or Dry Matter basis",
-            )}
-            className={cn(
-              "inline-flex min-h-11 shrink-0 items-center p-0.5 md:min-h-7",
-              isAntiSlop
-                ? "rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-sunken)]"
-                : "rounded-xl border border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--bg-sunken)]/70",
-            )}
-          >
-            {(["as_fed", "dry_matter"] as const).map((basis) => {
-              const active = config.activeBasis === basis;
-              return (
-                <button
-                  key={basis}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => onSetBasis(basis)}
-                  className={cn(
-                    "relative inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-md px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap transition-[transform,color] duration-150 sm:min-w-0 md:min-h-6 md:py-0.5 motion-reduce:transform-none",
-                    !isAntiSlop && "elastic-size-box rounded-lg active:scale-[0.97]",
-                    active
-                      ? isAntiSlop
-                        ? "text-[var(--text-primary)]"
-                        : "text-[var(--status-success)]"
-                      : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
-                  )}
-                >
-                  {active &&
-                    (useGpuFlip ? (
-                      <motion.span
-                        layoutId="toolbar-basis-pill"
-                        transition={{ type: "spring", stiffness: 460, damping: 34, mass: 0.75 }}
-                        aria-hidden="true"
-                        className="glow-pill-emerald pointer-events-none absolute inset-0 rounded-lg border border-[var(--status-success-border)]"
-                      />
-                    ) : (
-                      <span
-                        aria-hidden="true"
-                        className={cn(
-                          "pointer-events-none absolute inset-0",
-                          isAntiSlop
-                            ? "rounded-md border border-[var(--color-primary)] bg-[var(--bg-surface-elevated)]"
-                            : "rounded-lg bg-[var(--bg-surface-elevated)] shadow-[var(--shadow-neu-flat)]",
-                        )}
-                      />
-                    ))}
-                  <span className="relative z-10">
-                    {basis === "as_fed" ? (
-                      "As-Fed"
-                    ) : (
-                      <>
-                        <span aria-hidden="true" className="sm:hidden">
-                          {pickLang(language, "BK", "DM")}
-                        </span>
-                        <span className="sr-only sm:not-sr-only">
-                          {pickLang(language, "BK (DM)", "DM")}
-                        </span>
-                      </>
+          <div className="flex items-center justify-between gap-2 pt-0.5 sm:contents">
+            <span className="pl-1 text-[11px] font-semibold text-[var(--text-secondary)] sm:hidden">
+              {pickLang(language, "Basis Formulasi", "Formulation Basis")}
+            </span>
+            <div
+              role="group"
+              aria-label={pickLang(
+                language,
+                "Pilih basis As-Fed atau Bahan Kering",
+                "Select As-Fed or Dry Matter basis",
+              )}
+              className={cn(
+                "inline-flex min-h-11 w-fit shrink-0 items-center p-0.5 md:min-h-7",
+                isAntiSlop
+                  ? "rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-sunken)]"
+                  : "rounded-xl border border-[var(--glass-border-tint,var(--border-subtle))] bg-[var(--bg-sunken)]/70",
+              )}
+            >
+              {(["as_fed", "dry_matter"] as const).map((basis) => {
+                const active = config.activeBasis === basis;
+                return (
+                  <button
+                    key={basis}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => onSetBasis(basis)}
+                    className={cn(
+                      "relative inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-md px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap transition-[transform,color] duration-150 sm:min-w-0 md:min-h-6 md:py-0.5 motion-reduce:transform-none",
+                      !isAntiSlop && "elastic-size-box rounded-lg active:scale-[0.97]",
+                      active
+                        ? isAntiSlop
+                          ? "text-[var(--text-primary)]"
+                          : "text-[var(--status-success)]"
+                        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
                     )}
-                  </span>
-                </button>
-              );
-            })}
+                  >
+                    {active &&
+                      (useGpuFlip ? (
+                        <motion.span
+                          layoutId="toolbar-basis-pill"
+                          transition={{ type: "spring", stiffness: 460, damping: 34, mass: 0.75 }}
+                          aria-hidden="true"
+                          className="glow-pill-emerald pointer-events-none absolute inset-0 rounded-lg border border-[var(--status-success-border)]"
+                        />
+                      ) : (
+                        <span
+                          aria-hidden="true"
+                          className={cn(
+                            "pointer-events-none absolute inset-0",
+                            isAntiSlop
+                              ? "rounded-md border border-[var(--color-primary)] bg-[var(--bg-surface-elevated)]"
+                              : "rounded-lg bg-[var(--bg-surface-elevated)] shadow-[var(--shadow-neu-flat)]",
+                          )}
+                        />
+                      ))}
+                    <span className="relative z-10">
+                      {basis === "as_fed" ? (
+                        "As-Fed"
+                      ) : (
+                        <>
+                          <span aria-hidden="true" className="sm:hidden">
+                            {pickLang(language, "BK", "DM")}
+                          </span>
+                          <span className="sr-only sm:not-sr-only">
+                            {pickLang(language, "BK (DM)", "DM")}
+                          </span>
+                        </>
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 

@@ -1,7 +1,7 @@
 {
   "name": "openformu",
   "private": true,
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "Aplikasi web open-source offline-first (PWA) untuk formulasi pakan ternak presisi.",
   "type": "module",
   "scripts": {

@@ -48,6 +48,9 @@ export function Button({
   ...rest
 }: ButtonProps) {
   const isAntiSlop = useOptionalThemeContext()?.uiMode === "anti-slop";
+  const hasExplicitPx =
+    typeof className === "string" && /(?:^|\s)(?:[a-z0-9-]+:)*px-(?:\[|\d|auto)/.test(className);
+  const sizeClass = isAntiSlop ? ANTI_SLOP_SIZE_CLASSES[size] : SIZE_CLASSES[size];
 
   return (
     <button
@@ -56,7 +59,7 @@ export function Button({
         "inline-flex cursor-pointer items-center justify-center gap-1.5 font-semibold transition-[transform,background-color,border-color,box-shadow,opacity] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transform-none",
         isAntiSlop ? "rounded-md" : "rounded-lg",
         isAntiSlop ? ANTI_SLOP_VARIANT_CLASSES[variant] : VARIANT_CLASSES[variant],
-        isAntiSlop ? ANTI_SLOP_SIZE_CLASSES[size] : SIZE_CLASSES[size],
+        hasExplicitPx ? sizeClass.replace(/\b(?:[a-z0-9-]+:)*px-[^\s]+/g, "") : sizeClass,
         className,
       )}
       {...rest}

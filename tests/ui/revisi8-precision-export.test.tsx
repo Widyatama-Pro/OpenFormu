@@ -174,4 +174,20 @@ describe("Revisi 8 — Input Numerik Bebas-Kosong, Presisi 0.00x, Konsumsi Haria
     expect(dbPdfText).toContain("NO. DOK: OF-DB-15ING");
     expect(dbPdfText).toContain("TAIL KOP PENGESAHAN");
   });
+
+  it("NumericCellInput tidak menimpa lebar kustom (w-20 / w-[4.75rem]) dengan w-full", () => {
+    render(
+      <NumericCellInput
+        value={450}
+        fractionDigits={0}
+        ariaLabel="Bobot badan uji"
+        className="w-20"
+        onCommit={vi.fn()}
+      />,
+    );
+    const input = screen.getByLabelText<HTMLInputElement>("Bobot badan uji");
+    const tokens = input.className.split(/\s+/);
+    expect(tokens).toContain("w-20");
+    expect(tokens).not.toContain("w-full");
+  });
 });

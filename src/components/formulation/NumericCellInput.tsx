@@ -113,6 +113,9 @@ export function NumericCellInput({
   };
 
   const isError = invalid || parseError;
+  const hasExplicitWidth =
+    typeof className === "string" &&
+    /(?:^|\s)(?:[a-z0-9-]+:)*w-(?:\[|\d|auto|fit|min|max|px|full|screen)/.test(className);
 
   return (
     <input
@@ -174,7 +177,8 @@ export function NumericCellInput({
       }}
       onKeyDown={handleKeyDown}
       className={cn(
-        "min-h-11 w-full min-w-0 border px-1.5 py-1 text-right text-sm font-medium tabular-nums text-[var(--text-primary)] placeholder:text-[var(--text-muted)] transition-[border-color,background-color,box-shadow] duration-150 focus-visible:border-[var(--color-primary)] focus-visible:bg-[var(--bg-surface-elevated)] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-55 md:min-h-7 md:py-0.5 md:text-xs",
+        "min-h-11 min-w-0 border px-1.5 py-1 text-right text-sm font-medium tabular-nums text-[var(--text-primary)] placeholder:text-[var(--text-muted)] transition-[border-color,background-color,box-shadow] duration-150 focus-visible:border-[var(--color-primary)] focus-visible:bg-[var(--bg-surface-elevated)] focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-55 md:min-h-7 md:py-0.5 md:text-xs",
+        !hasExplicitWidth && "w-full",
         isAntiSlop
           ? "rounded-md border-[var(--border-subtle)] bg-[var(--bg-surface-elevated)] hover:border-[var(--border-strong)]"
           : "rounded-lg border-transparent bg-[var(--glass-row-bg,var(--bg-sunken))] hover:border-[var(--glass-border-tint,var(--border-subtle))] hover:bg-[var(--glass-sticky-bg,var(--bg-surface-elevated))]",

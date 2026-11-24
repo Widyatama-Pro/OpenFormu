@@ -167,7 +167,7 @@ export const IngredientMobileCards = memo(function IngredientMobileCards({
             </div>
 
             {/* Baris 2: Input Harga/kg, Min %, dan Max % selalu aktif & simetris */}
-            <div className="mt-3 grid grid-cols-3 gap-2">
+            <div className="mt-3 grid grid-cols-3 items-end gap-2">
               <div>
                 <div className="mb-1 flex min-h-6 items-center justify-between gap-1">
                   <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
@@ -201,7 +201,7 @@ export const IngredientMobileCards = memo(function IngredientMobileCards({
               </div>
 
               <div>
-                <span className="mb-1 block text-[11px] font-semibold text-[var(--text-secondary)]">
+                <span className="mb-1 flex min-h-6 items-center text-[11px] font-semibold text-[var(--text-secondary)]">
                   Min %
                 </span>
                 <NumericCellInput
@@ -218,7 +218,7 @@ export const IngredientMobileCards = memo(function IngredientMobileCards({
               </div>
 
               <div>
-                <span className="mb-1 block text-[11px] font-semibold text-[var(--text-secondary)]">
+                <span className="mb-1 flex min-h-6 items-center text-[11px] font-semibold text-[var(--text-secondary)]">
                   Max %
                 </span>
                 <NumericCellInput
